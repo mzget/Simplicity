@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/cloudflare-pages';
 import { cors } from 'hono/cors';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { D1Database, R2Bucket, KVNamespace } from '@cloudflare/workers-types';
 
 export interface Env {
@@ -8,15 +9,19 @@ export interface Env {
   R2?: R2Bucket;
   KV?: KVNamespace;
   GEMINI_API_KEY?: string;
+  ALLOWED_GOOGLE_EMAIL?: string;
+  GOOGLE_CLIENT_ID?: string;
 }
+
+const DEFAULT_OWNER_EMAIL = 'rattajak.n@gmail.com';
 
 const app = new Hono<{ Bindings: Env }>().basePath('/api');
 
 // Global middleware
 app.use('*', cors());
 
-// Extract User ID (Cloudflare Access email header or default self-hosted owner)
-const getUserId = (c: any): { id: string; email: string; name: string } => {
+// Extract User ID (Cloudflare Access email header, session cookie, or default authorized owner)
+const getUserId = (c: any): { id: string; email: string; name: string; picture?: string } => {
   const cfEmail = c.req.header('Cf-Access-Authenticated-User-Email');
   if (cfEmail) {
     return {
@@ -25,10 +30,43 @@ const getUserId = (c: any): { id: string; email: string; name: string } => {
       name: cfEmail.split('@')[0],
     };
   }
+
+  const sessionCookie = getCookie(c, 'simplicity_session');
+  if (sessionCookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(sessionCookie));
+      if (parsed?.email) {
+        return {
+          id: parsed.id || `usr_${parsed.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: parsed.email,
+          name: parsed.name || parsed.email.split('@')[0],
+          picture: parsed.picture,
+        };
+      }
+    } catch (_) {}
+  }
+
+  const authHeader = c.req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    try {
+      const parsed = JSON.parse(token);
+      if (parsed?.email) {
+        return {
+          id: parsed.id || `usr_${parsed.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: parsed.email,
+          name: parsed.name || parsed.email.split('@')[0],
+          picture: parsed.picture,
+        };
+      }
+    } catch (_) {}
+  }
+
+  const allowedEmail = c.env?.ALLOWED_GOOGLE_EMAIL || DEFAULT_OWNER_EMAIL;
   return {
-    id: 'usr_owner',
-    email: 'me@simplicity.local',
-    name: 'Account Owner',
+    id: `usr_${allowedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    email: allowedEmail,
+    name: allowedEmail.split('@')[0],
   };
 };
 
@@ -166,6 +204,104 @@ async function ensureTables(db: D1Database, user: { id: string; email: string; n
 }
 
 // ---------------- API ROUTES ----------------
+
+// Auth Endpoints
+app.post('/auth/google', async (c) => {
+  const allowed = (c.env?.ALLOWED_GOOGLE_EMAIL || DEFAULT_OWNER_EMAIL).trim().toLowerCase();
+  const body = await c.req.json().catch(() => ({}));
+
+  let email = '';
+  let name = '';
+  let picture = '';
+
+  if (body.credential) {
+    try {
+      const parts = String(body.credential).split('.');
+      if (parts.length >= 2) {
+        let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4 !== 0) base64 += '=';
+        const jsonStr = atob(base64);
+        const p = JSON.parse(jsonStr);
+        email = (p.email || '').trim().toLowerCase();
+        name = p.name || email.split('@')[0];
+        picture = p.picture || '';
+      }
+    } catch {
+      return c.json({ error: 'Failed to decode Google credential token' }, 400);
+    }
+  } else if (body.email) {
+    email = String(body.email).trim().toLowerCase();
+    name = String(body.name || email.split('@')[0]);
+    picture = String(body.picture || '');
+  }
+
+  if (!email) {
+    return c.json({ error: 'Missing email or credential' }, 400);
+  }
+
+  const allowedList = allowed.split(',').map((e) => e.trim().toLowerCase());
+  if (!allowedList.includes(email)) {
+    return c.json(
+      {
+        error: `Access denied. Google email "${email}" is not authorized. Access is strictly restricted to ${DEFAULT_OWNER_EMAIL}.`,
+      },
+      403
+    );
+  }
+
+  const userId = `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const user = { id: userId, email, name, picture };
+
+  // Set session cookie
+  setCookie(c, 'simplicity_session', encodeURIComponent(JSON.stringify(user)), {
+    path: '/',
+    httpOnly: false,
+    secure: false,
+    sameSite: 'Lax',
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
+
+  // If DB binding exists, ensure tables and migrate any legacy usr_owner records
+  if (c.env.DB) {
+    await ensureTables(c.env.DB, user);
+    try {
+      await c.env.DB.batch([
+        c.env.DB.prepare('UPDATE wallets SET user_id = ? WHERE user_id = "usr_owner"').bind(userId),
+        c.env.DB.prepare('UPDATE transactions SET user_id = ? WHERE user_id = "usr_owner"').bind(userId),
+        c.env.DB.prepare('UPDATE budgets SET user_id = ? WHERE user_id = "usr_owner"').bind(userId),
+        c.env.DB.prepare(`
+          INSERT INTO users (id, email, name, default_currency, created_at)
+          VALUES (?, ?, ?, 'THB', datetime('now'))
+          ON CONFLICT(id) DO UPDATE SET email = excluded.email, name = excluded.name
+        `).bind(userId, email, name),
+      ]);
+    } catch (err) {
+      console.warn('DB user migration warning:', err);
+    }
+  }
+
+  return c.json({ success: true, user });
+});
+
+app.get('/auth/me', async (c) => {
+  const sessionCookie = getCookie(c, 'simplicity_session');
+  if (sessionCookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(sessionCookie));
+      const allowed = (c.env?.ALLOWED_GOOGLE_EMAIL || DEFAULT_OWNER_EMAIL).trim().toLowerCase();
+      const allowedList = allowed.split(',').map((e) => e.trim().toLowerCase());
+      if (parsed?.email && allowedList.includes(parsed.email.toLowerCase())) {
+        return c.json({ user: parsed });
+      }
+    } catch (_) {}
+  }
+  return c.json({ user: null });
+});
+
+app.post('/auth/logout', async (c) => {
+  deleteCookie(c, 'simplicity_session', { path: '/' });
+  return c.json({ success: true });
+});
 
 // Health Check & User Profile
 app.get('/health', async (c) => {

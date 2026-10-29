@@ -105,3 +105,19 @@ export interface DashboardStats {
 }
 
 export type PeriodPreset = 'this_month' | 'last_month' | 'this_week' | 'this_year' | 'all_time' | 'custom';
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  defaultCurrency?: string;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+}
+

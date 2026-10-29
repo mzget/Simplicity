@@ -6,6 +6,44 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'simplicity_transactions',
   CATEGORIES: 'simplicity_categories',
   BUDGETS: 'simplicity_budgets',
+  AUTH: 'simplicity_auth_user',
+};
+
+export const getCurrentUserId = (): string => {
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.AUTH);
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u?.id) return u.id;
+      }
+    } catch (_) {}
+  }
+  return 'usr_rattajak_n_gmail_com';
+};
+
+export const migrateUserDataToUser = (targetUserId: string) => {
+  if (typeof window === 'undefined' || !targetUserId) return;
+  try {
+    const wRaw = localStorage.getItem(STORAGE_KEYS.WALLETS);
+    if (wRaw) {
+      const wallets: Wallet[] = JSON.parse(wRaw);
+      const updated = wallets.map((w) => (w.userId === 'usr_owner' ? { ...w, userId: targetUserId } : w));
+      localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(updated));
+    }
+    const txRaw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+    if (txRaw) {
+      const txs: Transaction[] = JSON.parse(txRaw);
+      const updated = txs.map((t) => (t.user_id === 'usr_owner' ? { ...t, user_id: targetUserId } : t));
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(updated));
+    }
+    const bRaw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+    if (bRaw) {
+      const budgets: Budget[] = JSON.parse(bRaw);
+      const updated = budgets.map((b) => (b.user_id === 'usr_owner' ? { ...b, user_id: targetUserId } : b));
+      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(updated));
+    }
+  } catch (_) {}
 };
 
 // Migrate legacy keys if present
@@ -284,7 +322,7 @@ export const api = {
     const id = `wal_${Date.now()}`;
     const newWallet: Wallet = {
       id,
-      userId: 'usr_owner',
+      userId: getCurrentUserId(),
       name: data.name || 'New Wallet',
       type: data.type || 'cash',
       currency: data.currency || 'THB',
@@ -429,7 +467,7 @@ export const api = {
     const newTx: Transaction = {
       id,
       wallet_id: data.walletId,
-      user_id: 'usr_owner',
+      user_id: getCurrentUserId(),
       category_id: data.categoryId,
       type: data.type || 'REGULAR',
       transfer_type: data.transferType || null,
@@ -473,7 +511,7 @@ export const api = {
     txs.unshift({
       id: outId,
       wallet_id: data.fromWalletId,
-      user_id: 'usr_owner',
+      user_id: getCurrentUserId(),
       category_id: 'cat_financial',
       type: 'TRANSFER',
       transfer_type: 'outgoing',
@@ -492,7 +530,7 @@ export const api = {
     txs.unshift({
       id: inId,
       wallet_id: data.toWalletId,
-      user_id: 'usr_owner',
+      user_id: getCurrentUserId(),
       category_id: 'cat_financial',
       type: 'TRANSFER',
       transfer_type: 'incoming',
@@ -574,7 +612,7 @@ export const api = {
     const id = `bud_${Date.now()}`;
     budgets.push({
       id,
-      user_id: 'usr_owner',
+      user_id: getCurrentUserId(),
       wallet_id: data.wallet_id || null,
       name: data.name || 'New Budget',
       amount: Number(data.amount) || 1000,
@@ -691,5 +729,40 @@ export const api = {
       date: new Date().toISOString().slice(0, 10),
       confidence: 0.94,
     };
+  },
+
+  // Authentication
+  async getMe(): Promise<{ user: any | null }> {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    const raw = localStorage.getItem(STORAGE_KEYS.AUTH);
+    return raw ? { user: JSON.parse(raw) } : { user: null };
+  },
+
+  async loginWithGoogle(payload: { email?: string; credential?: string; name?: string; picture?: string }): Promise<any> {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.user) {
+        localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(data.user));
+        migrateUserDataToUser(data.user.id);
+      }
+      return data;
+    }
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Login failed');
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (_) {}
+    localStorage.removeItem(STORAGE_KEYS.AUTH);
   },
 };
