@@ -54,13 +54,21 @@ jobs:
       - name: Build frontend static assets
         run: npm run build
 
+      - name: Ensure Cloudflare Pages project exists
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create simplicity --production-branch=main
+        continue-on-error: true # Continues if project already exists
+
       - name: Apply Cloudflare D1 Migrations
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply simplicity-d1 --remote
-        continue-on-error: true # Continues if D1 DB isn't created yet or already up-to-date
+        continue-on-error: true # Continues if D1 database UUID is not yet bound
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
