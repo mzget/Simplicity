@@ -85,3 +85,16 @@ In your Cloudflare Dashboard:
 2. Add an application protecting your Simplicity Pages custom domain (e.g. `money.yourdomain.com`).
 3. Set policy to allow only your personal Google / email address with OTP.
 4. Done! Zero-code enterprise authentication at the edge.
+
+---
+
+## CI/CD Deployment with GitHub Actions
+
+The repository includes a ready-to-use GitHub Actions workflow (`.github/workflows/deploy.yml`):
+- **Pull Requests to `main`**: Runs build and TypeScript validation.
+- **Push to `main`**: Automatically runs D1 migrations and deploys to Cloudflare Pages.
+
+### Required GitHub Secrets
+Go to your GitHub repository **Settings** > **Secrets and variables** > **Actions** and add:
+1. `CLOUDFLARE_API_TOKEN`: Cloudflare API Token with `Cloudflare Pages: Edit` and `D1: Edit` permissions (Create via Cloudflare Dashboard > My Profile > API Tokens > Create Token).
+2. `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID (Found in the Cloudflare Dashboard right sidebar on any domain overview page).
