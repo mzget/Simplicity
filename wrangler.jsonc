@@ -12,17 +12,5 @@
       "database_name": "simplicity-d1",
       "database_id": "b2c4680f-0e43-43b1-b346-98821ff8487b"
     }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "simplicity-receipts"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "KV",
-      "id": "SIMPLICITY_KV"
-    }
   ]
 }
