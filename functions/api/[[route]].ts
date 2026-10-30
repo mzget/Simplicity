@@ -133,15 +133,6 @@ app.use('*', cors());
 export const resolveAuthUser = async (
   c: any
 ): Promise<{ id: string; email: string; name: string; picture?: string } | null> => {
-  const cfEmail = c.req.header('Cf-Access-Authenticated-User-Email');
-  if (cfEmail) {
-    return {
-      id: `usr_${cfEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      email: cfEmail,
-      name: cfEmail.split('@')[0],
-    };
-  }
-
   const authHeader = c.req.header('Authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7).trim();
@@ -163,21 +154,6 @@ export const resolveAuthUser = async (
     }
   }
 
-  const sessionCookie = getCookie(c, 'simplicity_session');
-  if (sessionCookie) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(sessionCookie));
-      if (parsed?.email) {
-        return {
-          id: parsed.id || `usr_${parsed.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
-          email: parsed.email,
-          name: parsed.name || parsed.email.split('@')[0],
-          picture: parsed.picture,
-        };
-      }
-    } catch (_) {}
-  }
-
   // Local mode fallback
   if (isLocalEnvironment(c)) {
     c.header('X-Simplicity-Mode', 'local');
@@ -189,18 +165,20 @@ export const resolveAuthUser = async (
     };
   }
 
-  // Strictly reject unauthenticated requests in production
+  // Strictly reject unauthenticated requests in production (No standalone cookie or email fallback)
   return null;
 };
 
 // Authentication enforcement middleware for protected routes
 app.use('*', async (c, next) => {
   const path = c.req.path;
-  if (
-    path.endsWith('/auth/google') ||
-    path.endsWith('/auth/logout') ||
-    path.endsWith('/auth/me')
-  ) {
+  if (path.endsWith('/auth/google') || path.endsWith('/auth/logout')) {
+    return c.json(
+      { error: 'Standalone authentication is disabled. Access is only permitted via Oaktree Agent federation.' },
+      403
+    );
+  }
+  if (path.endsWith('/auth/me')) {
     return next();
   }
 
@@ -457,17 +435,6 @@ app.get('/auth/me', async (c) => {
     }
   }
 
-  const sessionCookie = getCookie(c, 'simplicity_session');
-  if (sessionCookie) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(sessionCookie));
-      const allowed = (c.env?.ALLOWED_GOOGLE_EMAIL || DEFAULT_OWNER_EMAIL).trim().toLowerCase();
-      const allowedList = allowed.split(',').map((e) => e.trim().toLowerCase());
-      if (parsed?.email && allowedList.includes(parsed.email.toLowerCase())) {
-        return c.json({ user: parsed });
-      }
-    } catch (_) {}
-  }
   return c.json({ user: null });
 });
 
