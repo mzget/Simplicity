@@ -32,6 +32,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Agents & Automation
+.agents/
+
 # Test outputs
 test-results/
 playwright-report/
