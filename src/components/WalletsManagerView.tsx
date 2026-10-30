@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Wallet } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -15,7 +15,8 @@ export const WalletsManagerView: React.FC<WalletsManagerViewProps> = ({
   onDeleteWallet,
   currency = 'THB',
 }) => {
-  const { setIsAddWalletOpen, setSelectedWalletId, setActiveTab } = useFinanceStore();
+  const { setIsAddWalletOpen, setSelectedWalletId, setActiveTab, usdThbRate } = useFinanceStore();
+  const rate = usdThbRate > 0 ? usdThbRate : 36.5;
 
   const getWalletIcon = (type: string) => {
     switch (type) {
@@ -95,6 +96,11 @@ export const WalletsManagerView: React.FC<WalletsManagerViewProps> = ({
                   }`}>
                     {balance >= 0 ? '+' : ''}{balance.toLocaleString()} {w.currency}
                   </span>
+                  {w.currency === 'USD' && (
+                    <span className="text-xs font-mono text-simplicity-muted block mt-0.5">
+                      ~{(balance * rate).toLocaleString()} {currency}
+                    </span>
+                  )}
                 </div>
               </div>
 

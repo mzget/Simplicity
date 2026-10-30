@@ -2,29 +2,231 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Simplicity Scoped Base Resets & Theme Tokens
+   Protects Host (Oaktree Agent / Joy UI) from Tailwind Preflight leaks.
+   ========================================================================== */
+
+/* 1. Theme CSS Custom Properties */
+.simplicity-scope {
+  --simplicity-canvas: #F4F7FA;
+  --simplicity-surface: #FFFFFF;
+  --simplicity-card: #FFFFFF;
+  --simplicity-card-glass: rgba(255, 255, 255, 0.85);
+  --simplicity-border: #E2E8F0;
+  --simplicity-text: #324C5B;
+  --simplicity-muted: #6B7F8E;
+  --simplicity-subtle: #9BAAB5;
+  --simplicity-accent: #10b981;
+  --simplicity-glass-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08);
+}
+
+.dark .simplicity-scope,
+.simplicity-scope.dark {
+  --simplicity-canvas: #0f172a;
+  --simplicity-surface: rgba(15, 20, 28, 0.85);
+  --simplicity-card: rgba(15, 20, 28, 0.85);
+  --simplicity-card-glass: rgba(15, 20, 28, 0.85);
+  --simplicity-border: rgba(255, 255, 255, 0.1);
+  --simplicity-text: #f8fafc;
+  --simplicity-muted: #94a3b8;
+  --simplicity-subtle: #64748b;
+  --simplicity-accent: #10b981;
+  --simplicity-glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* 2. Scoped Container & Element Resets */
+.simplicity-scope {
+  font-family: 'Open Sans', system-ui, -apple-system, sans-serif;
+  color: var(--simplicity-text, #324C5B);
+  box-sizing: border-box;
+}
+
+.simplicity-scope *,
+.simplicity-scope *::before,
+.simplicity-scope *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: var(--simplicity-border, #E2E8F0);
+}
+
+/* Button & input resets inside simplicity-scope */
+.simplicity-scope button,
+.simplicity-scope input,
+.simplicity-scope optgroup,
+.simplicity-scope select,
+.simplicity-scope textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.simplicity-scope button,
+.simplicity-scope [type='button'],
+.simplicity-scope [type='reset'],
+.simplicity-scope [type='submit'] {
+  background-color: transparent;
+  background-image: none;
+  cursor: pointer;
+}
+
+.simplicity-scope button:disabled,
+.simplicity-scope [type='button']:disabled,
+.simplicity-scope [type='reset']:disabled,
+.simplicity-scope [type='submit']:disabled {
+  cursor: default;
+}
+
+/* Heading & paragraph resets inside simplicity-scope */
+.simplicity-scope h1,
+.simplicity-scope h2,
+.simplicity-scope h3,
+.simplicity-scope h4,
+.simplicity-scope h5,
+.simplicity-scope h6 {
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0;
+}
+
+.simplicity-scope p,
+.simplicity-scope blockquote,
+.simplicity-scope dl,
+.simplicity-scope dd,
+.simplicity-scope figure {
+  margin: 0;
+}
+
+.simplicity-scope ol,
+.simplicity-scope ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.simplicity-scope img,
+.simplicity-scope svg,
+.simplicity-scope video,
+.simplicity-scope canvas,
+.simplicity-scope audio,
+.simplicity-scope iframe,
+.simplicity-scope embed,
+.simplicity-scope object {
+  display: block;
+  vertical-align: middle;
+}
+
+/* 3. Dark Glass Utility Classes (Oaktree Dark Glass Theme) */
+.simplicity-scope .simplicity-glass-card {
+  background: var(--simplicity-card-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--simplicity-border);
+  box-shadow: var(--simplicity-glass-shadow);
+}
+
+.simplicity-scope .simplicity-glass-panel {
+  background: var(--simplicity-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--simplicity-border);
+}
+
+/* Automatic Oaktree Dark Glass adaptation for standard surface/card classes inside .simplicity-scope.dark */
+.simplicity-scope.dark {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.simplicity-scope.dark .bg-white {
+  background-color: rgba(15, 20, 28, 0.85) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.simplicity-scope.dark .bg-simplicity-canvas,
+.simplicity-scope.dark .bg-simplicity-canvas\/40,
+.simplicity-scope.dark .bg-simplicity-canvas\/50,
+.simplicity-scope.dark .bg-simplicity-canvas\/60 {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+}
+
+.simplicity-scope.dark .bg-slate-100,
+.simplicity-scope.dark .bg-slate-50 {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+}
+
+.simplicity-scope.dark .text-simplicity-text {
+  color: #f8fafc !important;
+}
+
+.simplicity-scope.dark .text-simplicity-muted {
+  color: #94a3b8 !important;
+}
+
+.simplicity-scope.dark .border-simplicity-border,
+.simplicity-scope.dark .border-simplicity-border\/80,
+.simplicity-scope.dark .border-simplicity-border\/60,
+.simplicity-scope.dark .border-slate-100,
+.simplicity-scope.dark .border-slate-200 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.simplicity-scope.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.simplicity-scope.dark select,
+.simplicity-scope.dark input:not([type='checkbox']):not([type='file']),
+.simplicity-scope.dark textarea {
+  color: #f8fafc;
+}
+
+.simplicity-scope.dark select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+/* 4. Standalone Environment Fallback (when NOT embedded in Oaktree Host) */
 @layer base {
-  body {
+  html:not([data-joy-color-scheme]) body {
     background-color: #F4F7FA;
     color: #324C5B;
     font-family: 'Open Sans', system-ui, -apple-system, sans-serif;
   }
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
+/* 5. Scoped Scrollbars */
+.simplicity-scope ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
+.simplicity-scope ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
+.simplicity-scope ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
   border-radius: 9999px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+.simplicity-scope ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+.dark .simplicity-scope ::-webkit-scrollbar-thumb,
+.simplicity-scope.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+.dark .simplicity-scope ::-webkit-scrollbar-thumb:hover,
+.simplicity-scope.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }

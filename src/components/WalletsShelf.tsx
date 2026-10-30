@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Wallet } from '../types';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { CategoryIcon } from './CategoryIcon';
@@ -9,7 +9,17 @@ interface WalletsShelfProps {
 }
 
 export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
-  const { selectedWalletId, setSelectedWalletId, setIsAddWalletOpen } = useFinanceStore();
+  const { selectedWalletId, setSelectedWalletId, setIsAddWalletOpen, usdThbRate } = useFinanceStore();
+  const rate = usdThbRate > 0 ? usdThbRate : 36.5;
+
+  const toThb = (amount: number, currency?: string) => {
+    return currency === 'USD' ? amount * rate : amount;
+  };
+
+  const totalBalanceThb = wallets.reduce(
+    (acc, w) => acc + toThb(w.computed_balance || 0, w.currency),
+    0
+  );
 
   const getWalletIcon = (type: string) => {
     switch (type) {
@@ -23,12 +33,12 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-simplicity-muted">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-simplicity-muted dark:text-slate-400">
           Your Wallets & Accounts
         </h2>
         <button
           onClick={() => setIsAddWalletOpen(true)}
-          className="text-xs font-bold text-simplicity-teal hover:underline flex items-center gap-1"
+          className="text-xs font-bold text-simplicity-teal dark:text-emerald-400 hover:underline flex items-center gap-1"
         >
           <Plus size={14} /> Add Wallet
         </button>
@@ -38,23 +48,26 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
         {/* All Wallets Summary Card */}
         <div
           onClick={() => setSelectedWalletId('all')}
-          className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white ${
+          className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white simplicity-glass-card ${
             selectedWalletId === 'all'
-              ? 'ring-2 ring-simplicity-teal border-transparent shadow-simplicity'
+              ? 'ring-2 ring-simplicity-teal dark:ring-emerald-500 border-transparent shadow-simplicity'
               : 'border-simplicity-border/80 hover:border-simplicity-teal/40 hover:shadow-sm'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-simplicity-teal/10 text-simplicity-teal">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-simplicity-teal/10 text-simplicity-teal dark:text-emerald-400">
               All In One
             </span>
-            <div className="w-8 h-8 rounded-full bg-simplicity-teal flex items-center justify-center text-white">
+            <div className="w-8 h-8 rounded-full bg-simplicity-teal dark:bg-emerald-500 flex items-center justify-center text-white">
               <Coins size={16} />
             </div>
           </div>
-          <div className="text-sm font-semibold text-simplicity-text">All Wallets</div>
-          <div className="text-lg font-bold font-mono text-simplicity-teal mt-0.5">
-            {wallets.reduce((acc, w) => acc + (w.computed_balance || 0), 0).toLocaleString()} THB
+          <div className="text-sm font-semibold text-simplicity-text dark:text-slate-100">All Wallets</div>
+          <div className="text-lg font-bold font-mono text-simplicity-teal dark:text-emerald-400 mt-0.5">
+            {totalBalanceThb.toLocaleString()} THB
+          </div>
+          <div className="text-[11px] font-mono text-simplicity-muted dark:text-slate-400 mt-0.5">
+            ≈ ${(totalBalanceThb / rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (1 USD = {rate} THB)
           </div>
         </div>
 
@@ -63,14 +76,15 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
           const isSelected = selectedWalletId === wallet.id;
           const balance = wallet.computed_balance || 0;
           const isNegative = balance < 0;
+          const isUsd = wallet.currency === 'USD';
 
           return (
             <div
               key={wallet.id}
               onClick={() => setSelectedWalletId(wallet.id)}
-              className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white relative overflow-hidden ${
+              className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white simplicity-glass-card relative overflow-hidden ${
                 isSelected
-                  ? 'ring-2 ring-simplicity-teal border-transparent shadow-simplicity'
+                  ? 'ring-2 ring-simplicity-teal dark:ring-emerald-500 border-transparent shadow-simplicity'
                   : 'border-simplicity-border/80 hover:border-simplicity-teal/40 hover:shadow-sm'
               }`}
             >
@@ -91,13 +105,18 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
                 />
               </div>
 
-              <div className="text-sm font-semibold text-simplicity-text truncate" title={wallet.name}>
+              <div className="text-sm font-semibold text-simplicity-text dark:text-slate-100 truncate" title={wallet.name}>
                 {wallet.name}
               </div>
 
-              <div className={`text-lg font-bold font-mono mt-0.5 ${isNegative ? 'text-simplicity-red' : 'text-simplicity-text'}`}>
+              <div className={`text-lg font-bold font-mono mt-0.5 ${isNegative ? 'text-simplicity-red' : 'text-simplicity-text dark:text-slate-100'}`}>
                 {balance >= 0 ? '+' : ''}{balance.toLocaleString()} {wallet.currency}
               </div>
+              {isUsd && (
+                <div className="text-[11px] font-mono text-simplicity-muted dark:text-slate-400 mt-0.5">
+                  ~{(balance * rate).toLocaleString()} THB
+                </div>
+              )}
             </div>
           );
         })}

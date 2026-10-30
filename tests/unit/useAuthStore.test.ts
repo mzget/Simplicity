@@ -50,4 +50,31 @@ describe('useAuthStore', () => {
     expect(state.isAuthenticated).toBe(false);
     expect(state.user).toBeNull();
   });
+
+  it('syncExternalAuth ingests host user and token and sets isAuthenticated to true', () => {
+    useAuthStore.getState().syncExternalAuth(
+      { email: 'rattajak.n@gmail.com', name: 'Rattajak N.', picture: 'https://example.com/pic.png' },
+      'valid-host-jwt-token'
+    );
+
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user?.email).toBe('rattajak.n@gmail.com');
+    expect(state.user?.name).toBe('Rattajak N.');
+    expect(state.token).toBe('valid-host-jwt-token');
+    expect(localStorage.getItem('auth_token')).toBe('valid-host-jwt-token');
+  });
+
+  it('syncExternalAuth rejects empty token or missing email and resets session', () => {
+    useAuthStore.getState().syncExternalAuth(
+      { email: 'rattajak.n@gmail.com', name: 'Rattajak N.' },
+      'valid-host-jwt-token'
+    );
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+
+    useAuthStore.getState().syncExternalAuth({ email: 'rattajak.n@gmail.com', name: 'Rattajak N.' }, '   ');
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useAuthStore.getState().token).toBeNull();
+  });
 });

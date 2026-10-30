@@ -1,5 +1,6 @@
 import { Wallet, Category, Transaction, Budget, DashboardStats } from '../types';
 import { DEFAULT_CATEGORIES } from '../db/defaultCategories';
+import { useAuthStore } from '../store/useAuthStore';
 
 const STORAGE_KEYS = {
   WALLETS: 'simplicity_wallets',
@@ -7,7 +8,94 @@ const STORAGE_KEYS = {
   CATEGORIES: 'simplicity_categories',
   BUDGETS: 'simplicity_budgets',
   AUTH: 'simplicity_auth_user',
+  TOKEN: 'auth_token',
 };
+
+let configuredApiBaseUrl: string =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SIMPLICITY_API_BASE_URL) || '';
+
+let clientIsLocalMode: boolean =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+export const isLocalHostEnvironment = (): boolean => {
+  if (typeof window !== 'undefined') {
+    const h = window.location.hostname;
+    return h === 'localhost' || h === '127.0.0.1';
+  }
+  return true;
+};
+
+export const getIsLocalMode = (): boolean => clientIsLocalMode;
+export const setIsLocalMode = (val: boolean): void => {
+  clientIsLocalMode = val;
+};
+
+export const setSimplicityApiBaseUrl = (baseUrl: string): void => {
+  configuredApiBaseUrl = (baseUrl || '').replace(/\/+$/, '');
+};
+
+export const getSimplicityApiBaseUrl = (): string => configuredApiBaseUrl;
+
+export const getAuthToken = (): string | null => {
+  const storeToken = useAuthStore.getState?.()?.token;
+  if (storeToken && typeof storeToken === 'string' && storeToken.trim().length > 0) {
+    return storeToken.trim();
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const localToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      if (localToken && localToken.trim().length > 0 && localToken !== 'null' && localToken !== 'undefined') {
+        return localToken.trim();
+      }
+    } catch (_) {}
+  }
+  return null;
+};
+
+/**
+ * Unified API client fetch utility attaching Authorization: Bearer <token>
+ * and prepending SIMPLICITY_API_BASE_URL.
+ */
+export async function simplicityFetch(endpoint: string, init: RequestInit = {}): Promise<Response> {
+  const baseUrl = configuredApiBaseUrl ? configuredApiBaseUrl.replace(/\/+$/, '') : '';
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
+    ? endpoint
+    : `${baseUrl}${normalizedEndpoint}`;
+
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+
+  if (init.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((v, k) => {
+        headers[k] = v;
+      });
+    } else if (Array.isArray(init.headers)) {
+      init.headers.forEach(([k, v]) => {
+        headers[k] = v;
+      });
+    } else {
+      Object.assign(headers, init.headers as Record<string, string>);
+    }
+  }
+
+  if (token && !headers['Authorization'] && !headers['authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    ...init,
+    headers,
+  });
+
+  if (res.headers?.get?.('X-Simplicity-Mode') === 'local') {
+    clientIsLocalMode = true;
+  }
+
+  return res;
+}
 
 export const getCurrentUserId = (): string => {
   if (typeof window !== 'undefined') {
@@ -283,107 +371,155 @@ const seedInitialData = () => {
 // Initialize seed data
 seedInitialData();
 
+const handleApiOrLocalFallback = async <T>(
+  requestFn: () => Promise<Response>,
+  localFallbackFn: () => T | Promise<T>
+): Promise<T> => {
+  const isLocal = isLocalHostEnvironment();
+  try {
+    const res = await requestFn();
+    if (res.ok) {
+      return await res.json();
+    }
+    if (res.status === 401 && !isLocal) {
+      throw new Error('401 Unauthorized');
+    }
+    if (!isLocal) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
+  } catch (err) {
+    if (!isLocal) {
+      throw err;
+    }
+  }
+
+  clientIsLocalMode = true;
+  return await localFallbackFn();
+};
+
 export const api = {
+  setBaseUrl(baseUrl: string) {
+    setSimplicityApiBaseUrl(baseUrl);
+  },
+
+  setConfig(config: { apiBaseUrl?: string; isLocalMode?: boolean }) {
+    if (config.apiBaseUrl !== undefined) {
+      setSimplicityApiBaseUrl(config.apiBaseUrl);
+    }
+    if (config.isLocalMode !== undefined) {
+      setIsLocalMode(config.isLocalMode);
+    }
+  },
+
+  isLocalMode(): boolean {
+    return getIsLocalMode();
+  },
+
   // Wallets
   async getWallets(): Promise<Wallet[]> {
-    try {
-      const res = await fetch('/api/wallets');
-      if (res.ok) return await res.json();
-    } catch (_) {}
-    // Local fallback
-    const raw = localStorage.getItem(STORAGE_KEYS.WALLETS);
-    const wallets: Wallet[] = raw ? JSON.parse(raw) : [];
-    const txRaw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    const txs: Transaction[] = txRaw ? JSON.parse(txRaw) : [];
+    return handleApiOrLocalFallback(
+      () => simplicityFetch('/api/wallets'),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.WALLETS);
+        const wallets: Wallet[] = raw ? JSON.parse(raw) : [];
+        const txRaw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        const txs: Transaction[] = txRaw ? JSON.parse(txRaw) : [];
 
-    return wallets.map((w) => {
-      const totalTx = txs
-        .filter((t) => t.wallet_id === w.id && t.status === 'active')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      return {
-        ...w,
-        computed_balance: (w.startingBalance || 0) + totalTx,
-      };
-    });
+        return wallets.map((w) => {
+          const totalTx = txs
+            .filter((t) => t.wallet_id === w.id && t.status === 'active')
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+          return {
+            ...w,
+            computed_balance: (w.startingBalance || 0) + totalTx,
+          };
+        });
+      }
+    );
   },
 
   async createWallet(data: Partial<Wallet>): Promise<{ id: string }> {
-    try {
-      const res = await fetch('/api/wallets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) return await res.json();
-    } catch (_) {}
-
-    const raw = localStorage.getItem(STORAGE_KEYS.WALLETS);
-    const wallets: Wallet[] = raw ? JSON.parse(raw) : [];
-    const id = `wal_${Date.now()}`;
-    const newWallet: Wallet = {
-      id,
-      userId: getCurrentUserId(),
-      name: data.name || 'New Wallet',
-      type: data.type || 'cash',
-      currency: data.currency || 'THB',
-      startingBalance: Number(data.startingBalance) || 0,
-      currentBalance: Number(data.startingBalance) || 0,
-      computed_balance: Number(data.startingBalance) || 0,
-      color: data.color || '#12C48B',
-      icon: data.icon || 'Wallet',
-      orderIndex: wallets.length,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
-    wallets.push(newWallet);
-    localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(wallets));
-    return { id };
+    return handleApiOrLocalFallback(
+      () =>
+        simplicityFetch('/api/wallets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.WALLETS);
+        const wallets: Wallet[] = raw ? JSON.parse(raw) : [];
+        const id = `wal_${Date.now()}`;
+        const newWallet: Wallet = {
+          id,
+          userId: getCurrentUserId(),
+          name: data.name || 'New Wallet',
+          type: data.type || 'cash',
+          currency: data.currency || 'THB',
+          startingBalance: Number(data.startingBalance) || 0,
+          currentBalance: Number(data.startingBalance) || 0,
+          computed_balance: Number(data.startingBalance) || 0,
+          color: data.color || '#12C48B',
+          icon: data.icon || 'Wallet',
+          orderIndex: wallets.length,
+          status: 'active',
+          createdAt: new Date().toISOString(),
+        };
+        wallets.push(newWallet);
+        localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(wallets));
+        return { id };
+      }
+    );
   },
 
   async deleteWallet(id: string): Promise<void> {
-    try {
-      const res = await fetch(`/api/wallets/${id}`, { method: 'DELETE' });
-      if (res.ok) return;
-    } catch (_) {}
-    const raw = localStorage.getItem(STORAGE_KEYS.WALLETS);
-    if (!raw) return;
-    const wallets: Wallet[] = JSON.parse(raw).filter((w: Wallet) => w.id !== id);
-    localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(wallets));
+    await handleApiOrLocalFallback(
+      () => simplicityFetch(`/api/wallets/${id}`, { method: 'DELETE' }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.WALLETS);
+        if (!raw) return;
+        const wallets: Wallet[] = JSON.parse(raw).filter((w: Wallet) => w.id !== id);
+        localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(wallets));
+      }
+    );
   },
 
   // Categories
   async getCategories(): Promise<Category[]> {
-    try {
-      const res = await fetch('/api/categories');
-      if (res.ok) return await res.json();
-    } catch (_) {}
-    const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    return raw ? JSON.parse(raw) : DEFAULT_CATEGORIES;
+    return handleApiOrLocalFallback(
+      () => simplicityFetch('/api/categories'),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+        return raw ? JSON.parse(raw) : DEFAULT_CATEGORIES;
+      }
+    );
   },
 
   async createCategory(data: Partial<Category>): Promise<{ id: string }> {
-    try {
-      const res = await fetch('/api/categories', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) return await res.json();
-    } catch (_) {}
-    const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    const categories: Category[] = raw ? JSON.parse(raw) : DEFAULT_CATEGORIES;
-    const id = `cat_${Date.now()}`;
-    categories.push({
-      id,
-      name: data.name || 'Custom Category',
-      type: data.type || 'expense',
-      color: data.color || '#6B7F8E',
-      icon: data.icon || 'Tag',
-      position: categories.length + 1,
-      status: 'active',
-    });
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-    return { id };
+    return handleApiOrLocalFallback(
+      () =>
+        simplicityFetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+        const categories: Category[] = raw ? JSON.parse(raw) : DEFAULT_CATEGORIES;
+        const id = `cat_${Date.now()}`;
+        categories.push({
+          id,
+          name: data.name || 'Custom Category',
+          type: data.type || 'expense',
+          color: data.color || '#6B7F8E',
+          icon: data.icon || 'Tag',
+          position: categories.length + 1,
+          status: 'active',
+        });
+        localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+        return { id };
+      }
+    );
   },
 
   // Transactions
@@ -394,95 +530,98 @@ export const api = {
     endDate?: string;
     search?: string;
   }): Promise<Transaction[]> {
-    try {
-      const params = new URLSearchParams();
-      if (filters?.walletId) params.append('walletId', filters.walletId);
-      if (filters?.categoryId) params.append('categoryId', filters.categoryId);
-      if (filters?.startDate) params.append('startDate', filters.startDate);
-      if (filters?.endDate) params.append('endDate', filters.endDate);
-      if (filters?.search) params.append('search', filters.search);
+    return handleApiOrLocalFallback(
+      () => {
+        const params = new URLSearchParams();
+        if (filters?.walletId) params.append('walletId', filters.walletId);
+        if (filters?.categoryId) params.append('categoryId', filters.categoryId);
+        if (filters?.startDate) params.append('startDate', filters.startDate);
+        if (filters?.endDate) params.append('endDate', filters.endDate);
+        if (filters?.search) params.append('search', filters.search);
 
-      const res = await fetch(`/api/transactions?${params.toString()}`);
-      if (res.ok) return await res.json();
-    } catch (_) {}
+        return simplicityFetch(`/api/transactions?${params.toString()}`);
+      },
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        let txs: Transaction[] = raw ? JSON.parse(raw) : [];
+        const catRaw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+        const categories: Category[] = catRaw ? JSON.parse(catRaw) : DEFAULT_CATEGORIES;
+        const walRaw = localStorage.getItem(STORAGE_KEYS.WALLETS);
+        const wallets: Wallet[] = walRaw ? JSON.parse(walRaw) : [];
 
-    // Local fallback
-    const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    let txs: Transaction[] = raw ? JSON.parse(raw) : [];
-    const catRaw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-    const categories: Category[] = catRaw ? JSON.parse(catRaw) : DEFAULT_CATEGORIES;
-    const walRaw = localStorage.getItem(STORAGE_KEYS.WALLETS);
-    const wallets: Wallet[] = walRaw ? JSON.parse(walRaw) : [];
+        // Filter active
+        txs = txs.filter((t) => t.status === 'active');
 
-    // Filter active
-    txs = txs.filter((t) => t.status === 'active');
+        if (filters?.walletId && filters.walletId !== 'all') {
+          txs = txs.filter((t) => t.wallet_id === filters.walletId || t.target_wallet_id === filters.walletId);
+        }
+        if (filters?.categoryId && filters.categoryId !== 'all') {
+          txs = txs.filter((t) => t.category_id === filters.categoryId);
+        }
+        if (filters?.startDate) {
+          txs = txs.filter((t) => t.start_date >= filters.startDate!);
+        }
+        if (filters?.endDate) {
+          txs = txs.filter((t) => t.start_date <= filters.endDate!);
+        }
+        if (filters?.search) {
+          const q = filters.search.toLowerCase();
+          txs = txs.filter((t) => (t.note || '').toLowerCase().includes(q));
+        }
 
-    if (filters?.walletId && filters.walletId !== 'all') {
-      txs = txs.filter((t) => t.wallet_id === filters.walletId || t.target_wallet_id === filters.walletId);
-    }
-    if (filters?.categoryId && filters.categoryId !== 'all') {
-      txs = txs.filter((t) => t.category_id === filters.categoryId);
-    }
-    if (filters?.startDate) {
-      txs = txs.filter((t) => t.start_date >= filters.startDate!);
-    }
-    if (filters?.endDate) {
-      txs = txs.filter((t) => t.start_date <= filters.endDate!);
-    }
-    if (filters?.search) {
-      const q = filters.search.toLowerCase();
-      txs = txs.filter((t) => (t.note || '').toLowerCase().includes(q));
-    }
-
-    // Attach category and wallet metadata
-    return txs
-      .map((t) => {
-        const cat = categories.find((c) => c.id === t.category_id);
-        const wal = wallets.find((w) => w.id === t.wallet_id);
-        return {
-          ...t,
-          category_name: cat?.name || 'Uncategorized',
-          category_color: cat?.color || '#6B7F8E',
-          category_icon: cat?.icon || 'Tag',
-          category_type: cat?.type || 'expense',
-          wallet_name: wal?.name || 'Wallet',
-        };
-      })
-      .sort((a, b) => b.start_date.localeCompare(a.start_date));
+        // Attach category and wallet metadata
+        return txs
+          .map((t) => {
+            const cat = categories.find((c) => c.id === t.category_id);
+            const wal = wallets.find((w) => w.id === t.wallet_id);
+            return {
+              ...t,
+              category_name: cat?.name || 'Uncategorized',
+              category_color: cat?.color || '#6B7F8E',
+              category_icon: cat?.icon || 'Tag',
+              category_type: cat?.type || 'expense',
+              wallet_name: wal?.name || 'Wallet',
+              wallet_currency: wal?.currency || t.currency || 'THB',
+            };
+          })
+          .sort((a, b) => b.start_date.localeCompare(a.start_date));
+      }
+    );
   },
 
   async createTransaction(data: any): Promise<{ id: string }> {
-    try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) return await res.json();
-    } catch (_) {}
-
-    const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    const txs: Transaction[] = raw ? JSON.parse(raw) : [];
-    const id = `tx_${Date.now()}`;
-    const newTx: Transaction = {
-      id,
-      wallet_id: data.walletId,
-      user_id: getCurrentUserId(),
-      category_id: data.categoryId,
-      type: data.type || 'REGULAR',
-      transfer_type: data.transferType || null,
-      amount: Number(data.amount),
-      currency: data.currency || 'THB',
-      start_date: data.startDate || new Date().toISOString(),
-      note: data.note || null,
-      hashtags: data.hashtags || [],
-      status: 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    txs.unshift(newTx);
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
-    return { id };
+    return handleApiOrLocalFallback(
+      () =>
+        simplicityFetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        const txs: Transaction[] = raw ? JSON.parse(raw) : [];
+        const id = `tx_${Date.now()}`;
+        const newTx: Transaction = {
+          id,
+          wallet_id: data.walletId,
+          user_id: getCurrentUserId(),
+          category_id: data.categoryId,
+          type: data.type || 'REGULAR',
+          transfer_type: data.transferType || null,
+          amount: Number(data.amount),
+          currency: data.currency || 'THB',
+          start_date: data.startDate || new Date().toISOString(),
+          note: data.note || null,
+          hashtags: data.hashtags || [],
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        txs.unshift(newTx);
+        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+        return { id };
+      }
+    );
   },
 
   async createTransfer(data: {
@@ -492,150 +631,154 @@ export const api = {
     date?: string;
     note?: string;
   }): Promise<void> {
-    try {
-      const res = await fetch('/api/transfers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) return;
-    } catch (_) {}
+    await handleApiOrLocalFallback(
+      () =>
+        simplicityFetch('/api/transfers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        const txs: Transaction[] = raw ? JSON.parse(raw) : [];
+        const outId = `tx_out_${Date.now()}`;
+        const inId = `tx_in_${Date.now() + 1}`;
+        const date = data.date || new Date().toISOString();
+        const amt = Math.abs(Number(data.amount));
 
-    const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    const txs: Transaction[] = raw ? JSON.parse(raw) : [];
-    const outId = `tx_out_${Date.now()}`;
-    const inId = `tx_in_${Date.now() + 1}`;
-    const date = data.date || new Date().toISOString();
-    const amt = Math.abs(Number(data.amount));
+        txs.unshift({
+          id: outId,
+          wallet_id: data.fromWalletId,
+          user_id: getCurrentUserId(),
+          category_id: 'cat_financial',
+          type: 'TRANSFER',
+          transfer_type: 'outgoing',
+          linked_transaction_id: inId,
+          target_wallet_id: data.toWalletId,
+          amount: -amt,
+          currency: 'THB',
+          start_date: date,
+          note: data.note || 'Transfer Out',
+          hashtags: ['#transfer'],
+          status: 'active',
+          created_at: date,
+          updated_at: date,
+        });
 
-    txs.unshift({
-      id: outId,
-      wallet_id: data.fromWalletId,
-      user_id: getCurrentUserId(),
-      category_id: 'cat_financial',
-      type: 'TRANSFER',
-      transfer_type: 'outgoing',
-      linked_transaction_id: inId,
-      target_wallet_id: data.toWalletId,
-      amount: -amt,
-      currency: 'THB',
-      start_date: date,
-      note: data.note || 'Transfer Out',
-      hashtags: ['#transfer'],
-      status: 'active',
-      created_at: date,
-      updated_at: date,
-    });
+        txs.unshift({
+          id: inId,
+          wallet_id: data.toWalletId,
+          user_id: getCurrentUserId(),
+          category_id: 'cat_financial',
+          type: 'TRANSFER',
+          transfer_type: 'incoming',
+          linked_transaction_id: outId,
+          target_wallet_id: data.fromWalletId,
+          amount: amt,
+          currency: 'THB',
+          start_date: date,
+          note: data.note || 'Transfer In',
+          hashtags: ['#transfer'],
+          status: 'active',
+          created_at: date,
+          updated_at: date,
+        });
 
-    txs.unshift({
-      id: inId,
-      wallet_id: data.toWalletId,
-      user_id: getCurrentUserId(),
-      category_id: 'cat_financial',
-      type: 'TRANSFER',
-      transfer_type: 'incoming',
-      linked_transaction_id: outId,
-      target_wallet_id: data.fromWalletId,
-      amount: amt,
-      currency: 'THB',
-      start_date: date,
-      note: data.note || 'Transfer In',
-      hashtags: ['#transfer'],
-      status: 'active',
-      created_at: date,
-      updated_at: date,
-    });
-
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+      }
+    );
   },
 
   async deleteTransaction(id: string): Promise<void> {
-    try {
-      const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-      if (res.ok) return;
-    } catch (_) {}
-    const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    if (!raw) return;
-    const txs: Transaction[] = JSON.parse(raw).filter((t: Transaction) => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+    await handleApiOrLocalFallback(
+      () => simplicityFetch(`/api/transactions/${id}`, { method: 'DELETE' }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        if (!raw) return;
+        const txs: Transaction[] = JSON.parse(raw).filter((t: Transaction) => t.id !== id);
+        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+      }
+    );
   },
 
   // Budgets
   async getBudgets(): Promise<Budget[]> {
-    try {
-      const res = await fetch('/api/budgets');
-      if (res.ok) return await res.json();
-    } catch (_) {}
+    return handleApiOrLocalFallback(
+      () => simplicityFetch('/api/budgets'),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+        const budgets: Budget[] = raw ? JSON.parse(raw) : [];
+        const txRaw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        const txs: Transaction[] = txRaw ? JSON.parse(txRaw) : [];
 
-    const raw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
-    const budgets: Budget[] = raw ? JSON.parse(raw) : [];
-    const txRaw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    const txs: Transaction[] = txRaw ? JSON.parse(txRaw) : [];
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const startIso = startOfMonth.toISOString();
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    const startIso = startOfMonth.toISOString();
+        return budgets.map((b) => {
+          const categoryIds: string[] = typeof b.category_ids === 'string' ? JSON.parse(b.category_ids) : b.category_ids;
+          const spent = txs
+            .filter((t) => {
+              if (t.status !== 'active' || t.amount >= 0 || t.start_date < startIso) return false;
+              if (b.wallet_id && t.wallet_id !== b.wallet_id) return false;
+              if (categoryIds.length > 0 && !categoryIds.includes(t.category_id)) return false;
+              return true;
+            })
+            .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
 
-    return budgets.map((b) => {
-      const categoryIds: string[] = typeof b.category_ids === 'string' ? JSON.parse(b.category_ids) : b.category_ids;
-      const spent = txs
-        .filter((t) => {
-          if (t.status !== 'active' || t.amount >= 0 || t.start_date < startIso) return false;
-          if (b.wallet_id && t.wallet_id !== b.wallet_id) return false;
-          if (categoryIds.length > 0 && !categoryIds.includes(t.category_id)) return false;
-          return true;
-        })
-        .reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
-
-      return {
-        ...b,
-        currentSpent: spent,
-        percentSpent: Math.min(100, Math.round((spent / b.amount) * 100)),
-        remaining: Math.max(0, b.amount - spent),
-      };
-    });
+          return {
+            ...b,
+            currentSpent: spent,
+            percentSpent: Math.min(100, Math.round((spent / b.amount) * 100)),
+            remaining: Math.max(0, b.amount - spent),
+          };
+        });
+      }
+    );
   },
 
   async createBudget(data: Partial<Budget>): Promise<{ id: string }> {
-    try {
-      const res = await fetch('/api/budgets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) return await res.json();
-    } catch (_) {}
-
-    const raw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
-    const budgets: Budget[] = raw ? JSON.parse(raw) : [];
-    const id = `bud_${Date.now()}`;
-    budgets.push({
-      id,
-      user_id: getCurrentUserId(),
-      wallet_id: data.wallet_id || null,
-      name: data.name || 'New Budget',
-      amount: Number(data.amount) || 1000,
-      currency: data.currency || 'THB',
-      category_ids: JSON.stringify(data.category_ids || []),
-      period: data.period || 'month',
-      start_date: new Date().toISOString(),
-      status: 'active',
-      created_at: new Date().toISOString(),
-    });
-    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
-    return { id };
+    return handleApiOrLocalFallback(
+      () =>
+        simplicityFetch('/api/budgets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+        const budgets: Budget[] = raw ? JSON.parse(raw) : [];
+        const id = `bud_${Date.now()}`;
+        budgets.push({
+          id,
+          user_id: getCurrentUserId(),
+          wallet_id: data.wallet_id || null,
+          name: data.name || 'New Budget',
+          amount: Number(data.amount) || 1000,
+          currency: data.currency || 'THB',
+          category_ids: JSON.stringify(data.category_ids || []),
+          period: data.period || 'month',
+          start_date: new Date().toISOString(),
+          status: 'active',
+          created_at: new Date().toISOString(),
+        });
+        localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
+        return { id };
+      }
+    );
   },
 
   async deleteBudget(id: string): Promise<void> {
-    try {
-      const res = await fetch(`/api/budgets/${id}`, { method: 'DELETE' });
-      if (res.ok) return;
-    } catch (_) {}
-    const raw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
-    if (!raw) return;
-    const budgets: Budget[] = JSON.parse(raw).filter((b: Budget) => b.id !== id);
-    localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
+    await handleApiOrLocalFallback(
+      () => simplicityFetch(`/api/budgets/${id}`, { method: 'DELETE' }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.BUDGETS);
+        if (!raw) return;
+        const budgets: Budget[] = JSON.parse(raw).filter((b: Budget) => b.id !== id);
+        localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
+      }
+    );
   },
 
   // Dashboard Stats
@@ -644,97 +787,96 @@ export const api = {
     startDate?: string;
     endDate?: string;
   }): Promise<DashboardStats> {
-    try {
-      const params = new URLSearchParams();
-      if (filters?.walletId) params.append('walletId', filters.walletId);
-      if (filters?.startDate) params.append('startDate', filters.startDate);
-      if (filters?.endDate) params.append('endDate', filters.endDate);
+    return handleApiOrLocalFallback(
+      () => {
+        const params = new URLSearchParams();
+        if (filters?.walletId) params.append('walletId', filters.walletId);
+        if (filters?.startDate) params.append('startDate', filters.startDate);
+        if (filters?.endDate) params.append('endDate', filters.endDate);
 
-      const res = await fetch(`/api/stats/dashboard?${params.toString()}`);
-      if (res.ok) return await res.json();
-    } catch (_) {}
+        return simplicityFetch(`/api/stats/dashboard?${params.toString()}`);
+      },
+      async () => {
+        const wallets = await this.getWallets();
+        const txs = await this.getTransactions(filters);
 
-    // Local compute
-    const wallets = await this.getWallets();
-    const txs = await this.getTransactions(filters);
+        const totalBalance = wallets.reduce((sum, w) => sum + (w.computed_balance || 0), 0);
 
-    const totalBalance = wallets.reduce((sum, w) => sum + (w.computed_balance || 0), 0);
+        let periodIncome = 0;
+        let periodExpense = 0;
+        const catMap: Record<string, any> = {};
+        const flowMap: Record<string, any> = {};
 
-    let periodIncome = 0;
-    let periodExpense = 0;
-    const catMap: Record<string, any> = {};
-    const flowMap: Record<string, any> = {};
+        txs.forEach((t) => {
+          const amt = Number(t.amount);
+          const day = t.start_date.slice(0, 10);
 
-    txs.forEach((t) => {
-      const amt = Number(t.amount);
-      const day = t.start_date.slice(0, 10);
+          if (!flowMap[day]) {
+            flowMap[day] = { date: day, income: 0, expense: 0, net: 0 };
+          }
 
-      if (!flowMap[day]) {
-        flowMap[day] = { date: day, income: 0, expense: 0, net: 0 };
+          if (amt > 0) {
+            periodIncome += amt;
+            flowMap[day].income += amt;
+            flowMap[day].net += amt;
+          } else if (amt < 0) {
+            const exp = Math.abs(amt);
+            periodExpense += exp;
+            flowMap[day].expense += exp;
+            flowMap[day].net -= exp;
+
+            const catId = t.category_id || 'cat_other_exp';
+            if (!catMap[catId]) {
+              catMap[catId] = {
+                id: catId,
+                name: t.category_name || 'Other',
+                color: t.category_color || '#7F8C8D',
+                icon: t.category_icon || 'MoreHorizontal',
+                count: 0,
+                total: 0,
+              };
+            }
+            catMap[catId].count += 1;
+            catMap[catId].total += exp;
+          }
+        });
+
+        return {
+          totalBalance,
+          periodIncome,
+          periodExpense,
+          periodChange: periodIncome - periodExpense,
+          categoryBreakdown: Object.values(catMap).sort((a, b) => b.total - a.total),
+          cashFlowSeries: Object.values(flowMap).sort((a, b) => a.date.localeCompare(b.date)),
+          transactionCount: txs.length,
+        };
       }
-
-      if (amt > 0) {
-        periodIncome += amt;
-        flowMap[day].income += amt;
-        flowMap[day].net += amt;
-      } else if (amt < 0) {
-        const exp = Math.abs(amt);
-        periodExpense += exp;
-        flowMap[day].expense += exp;
-        flowMap[day].net -= exp;
-
-        const catId = t.category_id || 'cat_other_exp';
-        if (!catMap[catId]) {
-          catMap[catId] = {
-            id: catId,
-            name: t.category_name || 'Other',
-            color: t.category_color || '#7F8C8D',
-            icon: t.category_icon || 'MoreHorizontal',
-            count: 0,
-            total: 0,
-          };
-        }
-        catMap[catId].count += 1;
-        catMap[catId].total += exp;
-      }
-    });
-
-    return {
-      totalBalance,
-      periodIncome,
-      periodExpense,
-      periodChange: periodIncome - periodExpense,
-      categoryBreakdown: Object.values(catMap).sort((a, b) => b.total - a.total),
-      cashFlowSeries: Object.values(flowMap).sort((a, b) => a.date.localeCompare(b.date)),
-      transactionCount: txs.length,
-    };
+    );
   },
 
   // AI Receipt Scanner
   async scanReceipt(data: { ocrText?: string; filename?: string }): Promise<any> {
-    try {
-      const res = await fetch('/api/ai/scan-receipt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) return await res.json();
-    } catch (_) {}
-
-    // Mock intelligent fallback
-    return {
-      merchant: data.filename?.includes('coffee') ? 'Starbucks Coffee' : 'Convenience Store',
-      amount: -160,
-      suggestedCategoryId: 'cat_food',
-      date: new Date().toISOString().slice(0, 10),
-      confidence: 0.94,
-    };
+    return handleApiOrLocalFallback(
+      () =>
+        simplicityFetch('/api/ai/scan-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => ({
+        merchant: data.filename?.includes('coffee') ? 'Starbucks Coffee' : 'Convenience Store',
+        amount: -160,
+        suggestedCategoryId: 'cat_food',
+        date: new Date().toISOString().slice(0, 10),
+        confidence: 0.94,
+      })
+    );
   },
 
   // Authentication
   async getMe(): Promise<{ user: any | null }> {
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await simplicityFetch('/api/auth/me');
       if (res.ok) return await res.json();
     } catch (_) {}
     const raw = localStorage.getItem(STORAGE_KEYS.AUTH);
@@ -742,7 +884,7 @@ export const api = {
   },
 
   async loginWithGoogle(payload: { email?: string; credential?: string; name?: string; picture?: string }): Promise<any> {
-    const res = await fetch('/api/auth/google', {
+    const res = await simplicityFetch('/api/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -761,8 +903,9 @@ export const api = {
 
   async logout(): Promise<void> {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await simplicityFetch('/api/auth/logout', { method: 'POST' });
     } catch (_) {}
     localStorage.removeItem(STORAGE_KEYS.AUTH);
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
   },
 };

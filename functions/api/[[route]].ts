@@ -11,17 +11,128 @@ export interface Env {
   GEMINI_API_KEY?: string;
   ALLOWED_GOOGLE_EMAIL?: string;
   GOOGLE_CLIENT_ID?: string;
+  JWT_SECRET?: string;
+  IS_LOCAL?: string;
 }
 
 const DEFAULT_OWNER_EMAIL = 'rattajak.n@gmail.com';
+const DEFAULT_JWT_SECRET = 'oaktree-simplicity-shared-secret-jwt-key-2026';
 
-const app = new Hono<{ Bindings: Env }>().basePath('/api');
+export function base64urlEncode(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+export function base64urlDecode(str: string): string {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4 !== 0) {
+    base64 += '=';
+  }
+  const binString = atob(base64);
+  const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0)!);
+  return new TextDecoder().decode(bytes);
+}
+
+/**
+ * Signs a payload to generate an HMAC-SHA256 JWT.
+ */
+export async function signJwt(payload: any, secret: string): Promise<string> {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const encodedHeader = base64urlEncode(JSON.stringify(header));
+  const encodedPayload = base64urlEncode(JSON.stringify(payload));
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`${encodedHeader}.${encodedPayload}`);
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('HMAC', key, data);
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+}
+
+/**
+ * Verifies an HMAC-SHA256 JWT and returns the parsed payload if valid.
+ */
+export async function verifyJwt(token: string, secret: string): Promise<any | null> {
+  if (!token || !secret || typeof token !== 'string' || typeof secret !== 'string') {
+    return null;
+  }
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  if (!encodedHeader || !encodedPayload || !encodedSignature) return null;
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`${encodedHeader}.${encodedPayload}`);
+
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+
+    let b64Sig = encodedSignature.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64Sig.length % 4 !== 0) {
+      b64Sig += '=';
+    }
+    const signatureBytes = new Uint8Array(
+      atob(b64Sig)
+        .split('')
+        .map((c) => c.charCodeAt(0))
+    );
+
+    const isValid = await crypto.subtle.verify('HMAC', key, signatureBytes, data);
+    if (!isValid) return null;
+
+    const payloadStr = base64urlDecode(encodedPayload);
+    const payload = JSON.parse(payloadStr);
+
+    if (typeof payload.exp === 'number' && Date.now() >= payload.exp * 1000) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function isLocalEnvironment(c: any): boolean {
+  if (c.env?.IS_LOCAL === 'true') return true;
+  try {
+    const url = new URL(c.req.url);
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
+export const app = new Hono<{ Bindings: Env; Variables: { user: { id: string; email: string; name: string; picture?: string } } }>().basePath('/api');
 
 // Global middleware
 app.use('*', cors());
 
-// Extract User ID (Cloudflare Access email header, session cookie, or default authorized owner)
-const getUserId = (c: any): { id: string; email: string; name: string; picture?: string } => {
+export const resolveAuthUser = async (
+  c: any
+): Promise<{ id: string; email: string; name: string; picture?: string } | null> => {
   const cfEmail = c.req.header('Cf-Access-Authenticated-User-Email');
   if (cfEmail) {
     return {
@@ -29,6 +140,27 @@ const getUserId = (c: any): { id: string; email: string; name: string; picture?:
       email: cfEmail,
       name: cfEmail.split('@')[0],
     };
+  }
+
+  const authHeader = c.req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (token && token !== 'null' && token !== 'undefined') {
+      const secret = c.env?.JWT_SECRET || DEFAULT_JWT_SECRET;
+      const verified = await verifyJwt(token, secret);
+      if (verified?.email) {
+        return {
+          id: verified.id || `usr_${verified.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: verified.email,
+          name: verified.name || verified.email.split('@')[0],
+          picture: verified.picture,
+        };
+      }
+    }
+    // If an explicit Bearer header was provided in production and failed verification, return null
+    if (!isLocalEnvironment(c)) {
+      return null;
+    }
   }
 
   const sessionCookie = getCookie(c, 'simplicity_session');
@@ -46,21 +178,45 @@ const getUserId = (c: any): { id: string; email: string; name: string; picture?:
     } catch (_) {}
   }
 
-  const authHeader = c.req.header('Authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    try {
-      const parsed = JSON.parse(token);
-      if (parsed?.email) {
-        return {
-          id: parsed.id || `usr_${parsed.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
-          email: parsed.email,
-          name: parsed.name || parsed.email.split('@')[0],
-          picture: parsed.picture,
-        };
-      }
-    } catch (_) {}
+  // Local mode fallback
+  if (isLocalEnvironment(c)) {
+    c.header('X-Simplicity-Mode', 'local');
+    const allowedEmail = c.env?.ALLOWED_GOOGLE_EMAIL || DEFAULT_OWNER_EMAIL;
+    return {
+      id: `usr_${allowedEmail.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      email: allowedEmail,
+      name: allowedEmail.split('@')[0],
+    };
   }
+
+  // Strictly reject unauthenticated requests in production
+  return null;
+};
+
+// Authentication enforcement middleware for protected routes
+app.use('*', async (c, next) => {
+  const path = c.req.path;
+  if (
+    path.endsWith('/auth/google') ||
+    path.endsWith('/auth/logout') ||
+    path.endsWith('/auth/me')
+  ) {
+    return next();
+  }
+
+  const user = await resolveAuthUser(c);
+  if (!user) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  c.set('user', user);
+  return next();
+});
+
+// Extract User ID from context (populated by auth middleware)
+const getUserId = (c: any): { id: string; email: string; name: string; picture?: string } => {
+  const ctxUser = c.get?.('user');
+  if (ctxUser) return ctxUser;
 
   const allowedEmail = c.env?.ALLOWED_GOOGLE_EMAIL || DEFAULT_OWNER_EMAIL;
   return {
@@ -284,6 +440,23 @@ app.post('/auth/google', async (c) => {
 });
 
 app.get('/auth/me', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    const secret = c.env?.JWT_SECRET || DEFAULT_JWT_SECRET;
+    const verified = await verifyJwt(token, secret);
+    if (verified?.email) {
+      return c.json({
+        user: {
+          id: verified.id || `usr_${verified.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          email: verified.email,
+          name: verified.name || verified.email.split('@')[0],
+          picture: verified.picture,
+        },
+      });
+    }
+  }
+
   const sessionCookie = getCookie(c, 'simplicity_session');
   if (sessionCookie) {
     try {

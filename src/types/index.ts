@@ -116,6 +116,7 @@ export interface AuthUser {
 
 export interface AuthState {
   user: AuthUser | null;
+  token?: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
