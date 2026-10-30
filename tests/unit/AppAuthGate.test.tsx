@@ -1,58 +1,41 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { App } from '../../src/App';
 import { useAuthStore } from '../../src/store/useAuthStore';
 
-// Mock recharts to prevent SVG bounding box issues in test runner
-vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  BarChart: () => <div>BarChart</div>,
-  PieChart: () => <div>PieChart</div>,
-  Pie: () => <div>Pie</div>,
-  Cell: () => <div>Cell</div>,
-  Bar: () => <div>Bar</div>,
-  XAxis: () => <div>XAxis</div>,
-  YAxis: () => <div>YAxis</div>,
-  Tooltip: () => <div>Tooltip</div>,
-}));
-
-describe('App Authentication Gate', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    vi.restoreAllMocks();
-  });
-
-  it('renders LoginPage when user is unauthenticated', () => {
+describe('App Standalone Mode Disabled Gate', () => {
+  it('blocks direct standalone access when unauthenticated and displays Federation-only notice', () => {
     useAuthStore.setState({
       user: null,
+      token: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
     });
 
     render(<App />);
-    expect(screen.getByRole('button', { name: /Sign in with Google/i })).toBeInTheDocument();
+    expect(screen.getByText(/Standalone Access Disabled/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /SIMPLICITY FINANCE/i })).toBeInTheDocument();
+    expect(screen.getByText(/\/assets\/remoteEntry\.js/i)).toBeInTheDocument();
     expect(screen.queryByText(/Cash Flow Dynamics/i)).not.toBeInTheDocument();
   });
 
-  it('renders main application dashboard and Navbar when authenticated', () => {
+  it('blocks direct standalone access even if localStorage has auth state, preventing direct URL data mutation', () => {
     useAuthStore.setState({
       user: {
         id: 'usr_rattajak_n_gmail_com',
         email: 'rattajak.n@gmail.com',
         name: 'Rattajak N',
       },
+      token: 'some-token',
       isAuthenticated: true,
       isLoading: false,
       error: null,
     });
 
     render(<App />);
-    // Main navigation tabs in Navbar
-    expect(screen.getByRole('button', { name: /Dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Transactions/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Budgets/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Wallets/i }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Standalone Access Disabled/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Add Wallet/i })).not.toBeInTheDocument();
   });
 });

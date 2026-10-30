@@ -172,6 +172,22 @@ describe('HMAC-SHA256 JWT Verification (verifyJwt) & API Security', () => {
       expect(res.status).toBe(200);
       expect(res.headers.get('X-Simplicity-Mode')).toBe('local');
     });
+
+    it('rejects standalone /api/auth/google and /api/auth/logout endpoints with HTTP 403', async () => {
+      const loginReq = new Request('https://simplicity.pages.dev/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'rattajak.n@gmail.com' }),
+      });
+      const loginRes = await app.fetch(loginReq, {
+        JWT_SECRET: TEST_SECRET,
+        IS_LOCAL: 'false',
+      } as any);
+
+      expect(loginRes.status).toBe(403);
+      const body = (await loginRes.json()) as any;
+      expect(body.error).toContain('Standalone authentication is disabled');
+    });
   });
 
   describe('simplicityFetch Unified Client', () => {
