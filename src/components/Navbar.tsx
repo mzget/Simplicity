@@ -1,5 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { Wallet } from '../types';
 import { 
   Plus, 
@@ -10,7 +11,9 @@ import {
   LayoutDashboard,
   Receipt,
   PiggyBank,
-  FolderKanban
+  FolderKanban,
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -18,6 +21,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ wallets }) => {
+  const { user, logout } = useAuthStore();
   const {
     activeTab,
     setActiveTab,
@@ -169,9 +173,57 @@ export const Navbar: React.FC<NavbarProps> = ({ wallets }) => {
               <span>Add</span>
             </button>
 
-            {/* Profile Avatar */}
-            <div className="w-8 h-8 ml-1 rounded-full bg-simplicity-text text-white flex items-center justify-center font-bold text-xs ring-2 ring-simplicity-teal/30">
-              CF
+            {/* Profile Avatar & User Menu Dropdown */}
+            <div className="relative group ml-1">
+              <button
+                type="button"
+                className="flex items-center gap-2 p-0.5 rounded-full hover:ring-2 hover:ring-simplicity-teal/40 transition-all focus:outline-none"
+                title={user?.email || 'User Account'}
+              >
+                {user?.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-simplicity-teal/30"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-simplicity-text text-white flex items-center justify-center font-bold text-xs ring-2 ring-simplicity-teal/30">
+                    {user?.name ? user.name.slice(0, 2).toUpperCase() : 'RN'}
+                  </div>
+                )}
+              </button>
+
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-simplicity border border-simplicity-border p-3 hidden group-hover:block transition-all z-50">
+                <div className="flex items-center gap-3 p-2 bg-slate-50/70 rounded-xl mb-2">
+                  <div className="w-10 h-10 rounded-full bg-simplicity-teal text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                    {user?.picture ? (
+                      <img src={user.picture} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.name ? user.name.slice(0, 2).toUpperCase() : 'RN'
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-simplicity-text truncate">{user?.name || 'Owner'}</p>
+                    <p className="text-[11px] text-simplicity-muted truncate">{user?.email || 'rattajak.n@gmail.com'}</p>
+                  </div>
+                </div>
+
+                <div className="px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 rounded-lg mb-2">
+                  <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                  <span className="truncate">Google Authorized Owner</span>
+                </div>
+
+                <div className="border-t border-slate-100 my-1" />
+
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           </div>
 

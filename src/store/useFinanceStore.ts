@@ -40,6 +40,13 @@ interface FinanceState {
 
   isAiScanOpen: boolean;
   setIsAiScanOpen: (open: boolean) => void;
+
+  // Theme & Exchange Rate Synchronization (Milestone 4)
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+
+  usdThbRate: number;
+  setUsdThbRate: (rate: number) => void;
 }
 
 const getDatesForPreset = (preset: PeriodPreset): { start: string; end: string } => {
@@ -124,5 +131,18 @@ export const useFinanceStore = create<FinanceState>((set) => {
 
     isAiScanOpen: false,
     setIsAiScanOpen: (isAiScanOpen) => set({ isAiScanOpen }),
+
+    theme: 'dark',
+    setTheme: (theme) =>
+      set({
+        theme: theme === 'light' ? 'light' : 'dark',
+      }),
+
+    usdThbRate: 36.5,
+    setUsdThbRate: (rate) => {
+      if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0) {
+        set({ usdThbRate: rate });
+      }
+    },
   };
 });

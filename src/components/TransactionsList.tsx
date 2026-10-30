@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Transaction } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -16,7 +16,12 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
   onDelete,
   currency = 'THB',
 }) => {
-  const { setEditingTx } = useFinanceStore();
+  const { setEditingTx, usdThbRate } = useFinanceStore();
+  const rate = usdThbRate > 0 ? usdThbRate : 36.5;
+
+  const toThb = (amount: number, txCurrency?: string) => {
+    return txCurrency === 'USD' ? amount * rate : amount;
+  };
 
   // Group transactions by date (YYYY-MM-DD)
   const grouped = transactions.reduce<Record<string, { txs: Transaction[]; dailySum: number }>>(
@@ -26,7 +31,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
         acc[dateKey] = { txs: [], dailySum: 0 };
       }
       acc[dateKey].txs.push(tx);
-      acc[dateKey].dailySum += Number(tx.amount);
+      acc[dateKey].dailySum += toThb(Number(tx.amount), tx.currency || tx.wallet_currency);
       return acc;
     },
     {}
@@ -136,15 +141,22 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
 
                     {/* Right: Amount & Quick Actions */}
                     <div className="flex items-center gap-3 shrink-0 ml-4">
-                      <span className={`text-base font-bold font-mono tracking-tight ${
-                        isTransfer
-                          ? 'text-simplicity-blue'
-                          : isExpense
-                          ? 'text-simplicity-red'
-                          : 'text-simplicity-teal'
-                      }`}>
-                        {amt > 0 ? '+' : ''}{amt.toLocaleString()} {currency}
-                      </span>
+                      <div className="text-right">
+                        <span className={`text-base font-bold font-mono tracking-tight block ${
+                          isTransfer
+                            ? 'text-simplicity-blue'
+                            : isExpense
+                            ? 'text-simplicity-red'
+                            : 'text-simplicity-teal dark:text-emerald-400'
+                        }`}>
+                          {amt > 0 ? '+' : ''}{amt.toLocaleString()} {tx.currency || currency}
+                        </span>
+                        {(tx.currency === 'USD' || tx.foreign_currency === 'USD') && (
+                          <span className="text-[11px] font-mono text-simplicity-muted block">
+                            ~{Math.round(amt * rate).toLocaleString()} THB
+                          </span>
+                        )}
+                      </div>
 
                       <button
                         onClick={(e) => {

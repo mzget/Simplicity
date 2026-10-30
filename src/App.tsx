@@ -1,7 +1,9 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFinanceStore } from './store/useFinanceStore';
+import { useAuthStore } from './store/useAuthStore';
 import { api } from './api/client';
 import { Wallet, Category, Transaction, Budget, DashboardStats } from './types';
+import { LoginPage } from './components/LoginPage';
 import { Navbar } from './components/Navbar';
 import { WalletsShelf } from './components/WalletsShelf';
 import { DatePeriodBar } from './components/DatePeriodBar';
@@ -29,6 +31,8 @@ export const App: React.FC = () => {
     setIsAddTxOpen,
   } = useFinanceStore();
 
+  const { isAuthenticated, checkSession } = useAuthStore();
+
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -36,8 +40,13 @@ export const App: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
   // Fetch all state
   const refreshData = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const [wList, cList, txList, bList, sData] = await Promise.all([
         api.getWallets(),
@@ -121,6 +130,10 @@ export const App: React.FC = () => {
   const handleApplyReceipt = (data: { merchant: string; amount: number; categoryId: string; date: string }) => {
     setIsAddTxOpen(true);
   };
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="min-h-screen bg-simplicity-canvas flex flex-col font-sans">

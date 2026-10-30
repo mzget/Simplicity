@@ -1,5 +1,6 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
+import { simplicityFetch } from '../api/client';
 import { Wallet, Category } from '../types';
 import Papa from 'papaparse';
 import { X, Upload, FileSpreadsheet, Check, AlertCircle } from 'lucide-react';
@@ -77,7 +78,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
       });
 
       // Submit via API
-      await fetch('/api/import', {
+      await simplicityFetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transactions: formatted }),
