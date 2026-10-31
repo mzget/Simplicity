@@ -1,6 +1,14 @@
 import { Wallet, Category, Transaction, Budget, DashboardStats } from '../types';
 import { DEFAULT_CATEGORIES } from '../db/defaultCategories';
 import { useAuthStore } from '../store/useAuthStore';
+import {
+  saveSnapshot,
+  getSnapshot,
+  saveTransactionsBatch,
+  getCachedTransactions,
+  pruneOldTransactions,
+} from '../utils/idbStorage';
+import { enqueueOfflineMutation, OfflineMutation } from '../utils/offlineSync';
 
 const STORAGE_KEYS = {
   WALLETS: 'simplicity_wallets',
@@ -60,9 +68,13 @@ export const getAuthToken = (): string | null => {
 export async function simplicityFetch(endpoint: string, init: RequestInit = {}): Promise<Response> {
   const baseUrl = configuredApiBaseUrl ? configuredApiBaseUrl.replace(/\/+$/, '') : '';
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
+  let url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
     ? endpoint
     : `${baseUrl}${normalizedEndpoint}`;
+
+  if (baseUrl.endsWith('/api') && normalizedEndpoint.startsWith('/api/')) {
+    url = `${baseUrl.slice(0, -4)}${normalizedEndpoint}`;
+  }
 
   const token = getAuthToken();
   const headers: Record<string, string> = {};
@@ -371,26 +383,59 @@ const seedInitialData = () => {
 // Initialize seed data
 seedInitialData();
 
+const isClientOffline = (): boolean => {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+};
+
 const handleApiOrLocalFallback = async <T>(
   requestFn: () => Promise<Response>,
-  localFallbackFn: () => T | Promise<T>
+  localFallbackFn: () => T | Promise<T>,
+  cacheSnapshotKey?: string
 ): Promise<T> => {
   const isLocal = isLocalHostEnvironment();
-  try {
-    const res = await requestFn();
-    if (res.ok) {
-      return await res.json();
+  const offline = isClientOffline();
+
+  if (!offline) {
+    try {
+      const res = await requestFn();
+      if (res.ok) {
+        const data = await res.json();
+        // Save Read-Through Snapshot to IndexedDB & prune
+        if (cacheSnapshotKey) {
+          saveSnapshot(cacheSnapshotKey, data).catch(() => {});
+          if (cacheSnapshotKey === 'transactions' && Array.isArray(data)) {
+            saveTransactionsBatch(data).catch(() => {});
+            pruneOldTransactions(180).catch(() => {});
+          }
+        }
+        return data as T;
+      }
+      if (res.status === 401 && !isLocal) {
+        throw new Error('401 Unauthorized');
+      }
+      // If server returned 4xx/5xx in production, let it fail unless offline
+      if (!isLocal) {
+        throw new Error(`API Error: ${res.status} ${res.statusText}`);
+      }
+    } catch (err) {
+      if (!isLocal && !offline) {
+        // Only fallback if the error is a network connection failure (TypeError)
+        const isNetworkErr = err instanceof TypeError || (err as any)?.name === 'TypeError';
+        if (!isNetworkErr) {
+          throw err;
+        }
+      }
     }
-    if (res.status === 401 && !isLocal) {
-      throw new Error('401 Unauthorized');
-    }
-    if (!isLocal) {
-      throw new Error(`API Error: ${res.status} ${res.statusText}`);
-    }
-  } catch (err) {
-    if (!isLocal) {
-      throw err;
-    }
+  }
+
+  // Fallback to IndexedDB snapshot or Local Storage
+  if (cacheSnapshotKey) {
+    try {
+      const idbData = await getSnapshot<T>(cacheSnapshotKey);
+      if (idbData !== null && idbData !== undefined) {
+        return idbData;
+      }
+    } catch (_) {}
   }
 
   clientIsLocalMode = true;
@@ -434,7 +479,8 @@ export const api = {
             computed_balance: (w.startingBalance || 0) + totalTx,
           };
         });
-      }
+      },
+      'wallets'
     );
   },
 
@@ -491,7 +537,8 @@ export const api = {
       () => {
         const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
         return raw ? JSON.parse(raw) : DEFAULT_CATEGORIES;
-      }
+      },
+      'categories'
     );
   },
 
@@ -585,41 +632,145 @@ export const api = {
             };
           })
           .sort((a, b) => b.start_date.localeCompare(a.start_date));
-      }
+      },
+      'transactions'
     );
   },
 
   async createTransaction(data: any): Promise<{ id: string }> {
+    const id = data.id || `tx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const payload = { ...data, id };
+    const offline = isClientOffline();
+
+    if (offline) {
+      // Offline Write: Enqueue and perform optimistic update
+      enqueueOfflineMutation({
+        id: `mut_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        endpoint: '/api/transactions',
+        method: 'POST',
+        body: payload,
+        timestamp: Date.now(),
+        retryCount: 0,
+        label: `Create Transaction: ${payload.note || payload.amount}`,
+      }).catch(() => {});
+
+      const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+      const txs: Transaction[] = raw ? JSON.parse(raw) : [];
+      const newTx: Transaction = {
+        id,
+        wallet_id: payload.walletId,
+        user_id: getCurrentUserId(),
+        category_id: payload.categoryId,
+        type: payload.type || 'REGULAR',
+        transfer_type: payload.transferType || null,
+        amount: Number(payload.amount),
+        currency: payload.currency || 'THB',
+        start_date: payload.startDate || new Date().toISOString(),
+        note: payload.note || null,
+        hashtags: payload.hashtags || [],
+        is_pending: 1,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      txs.unshift(newTx);
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+      saveTransactionsBatch([newTx]).catch(() => {});
+      return { id };
+    }
+
     return handleApiOrLocalFallback(
       () =>
         simplicityFetch('/api/transactions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         }),
       () => {
         const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
         const txs: Transaction[] = raw ? JSON.parse(raw) : [];
-        const id = `tx_${Date.now()}`;
         const newTx: Transaction = {
           id,
-          wallet_id: data.walletId,
+          wallet_id: payload.walletId,
           user_id: getCurrentUserId(),
-          category_id: data.categoryId,
-          type: data.type || 'REGULAR',
-          transfer_type: data.transferType || null,
-          amount: Number(data.amount),
-          currency: data.currency || 'THB',
-          start_date: data.startDate || new Date().toISOString(),
-          note: data.note || null,
-          hashtags: data.hashtags || [],
+          category_id: payload.categoryId,
+          type: payload.type || 'REGULAR',
+          transfer_type: payload.transferType || null,
+          amount: Number(payload.amount),
+          currency: payload.currency || 'THB',
+          start_date: payload.startDate || new Date().toISOString(),
+          note: payload.note || null,
+          hashtags: payload.hashtags || [],
           status: 'active',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
         txs.unshift(newTx);
         localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+        saveTransactionsBatch([newTx]).catch(() => {});
         return { id };
+      }
+    );
+  },
+
+  async updateTransaction(id: string, data: any): Promise<void> {
+    const offline = isClientOffline();
+
+    if (offline) {
+      enqueueOfflineMutation({
+        id: `mut_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        endpoint: `/api/transactions/${id}`,
+        method: 'PUT',
+        body: data,
+        timestamp: Date.now(),
+        retryCount: 0,
+        label: `Update Transaction: ${data.note || id}`,
+      }).catch(() => {});
+
+      const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+      if (raw) {
+        const txs: Transaction[] = JSON.parse(raw);
+        const idx = txs.findIndex((t) => t.id === id);
+        if (idx !== -1) {
+          txs[idx] = {
+            ...txs[idx],
+            ...data,
+            wallet_id: data.walletId || txs[idx].wallet_id,
+            category_id: data.categoryId || txs[idx].category_id,
+            is_pending: 1,
+            updated_at: new Date().toISOString(),
+          };
+          localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+          saveTransactionsBatch([txs[idx]]).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    await handleApiOrLocalFallback(
+      () =>
+        simplicityFetch(`/api/transactions/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }),
+      () => {
+        const raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        if (raw) {
+          const txs: Transaction[] = JSON.parse(raw);
+          const idx = txs.findIndex((t) => t.id === id);
+          if (idx !== -1) {
+            txs[idx] = {
+              ...txs[idx],
+              ...data,
+              wallet_id: data.walletId || txs[idx].wallet_id,
+              category_id: data.categoryId || txs[idx].category_id,
+              updated_at: new Date().toISOString(),
+            };
+            localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));
+            saveTransactionsBatch([txs[idx]]).catch(() => {});
+          }
+        }
       }
     );
   },

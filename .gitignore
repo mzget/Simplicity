@@ -40,3 +40,8 @@ test-results/
 playwright-report/
 blob-report/
 
+
+# Spendee session & exports
+.spendee_session/
+spendee_all_transactions.json
+spendee_transactions_simplicity.csv

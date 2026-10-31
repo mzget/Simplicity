@@ -117,6 +117,14 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                               <ImageIcon size={13} className="text-simplicity-muted shrink-0" />
                             </span>
                           )}
+                          {tx.is_pending === 1 && (
+                            <span
+                              title="Offline transaction: waiting to sync"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                            >
+                              Pending Sync
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">

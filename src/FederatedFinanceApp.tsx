@@ -16,6 +16,8 @@ import { BudgetsView } from './components/BudgetsView';
 import { WalletsManagerView } from './components/WalletsManagerView';
 import { CSVImportModal } from './components/CSVImportModal';
 import { ReceiptScannerModal } from './components/ReceiptScannerModal';
+import { PwaStatusBanner } from './components/PwaStatusBanner';
+import { usePwaStore } from './store/usePwaStore';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -240,11 +242,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
   // Handlers for child components
   const handleSaveTransaction = async (data: any) => {
     if (data.id) {
-      await simplicityFetch(`/api/transactions/${data.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      await api.updateTransaction(data.id, data);
     } else {
       await api.createTransaction(data);
     }
@@ -303,6 +301,11 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
 
   const activeTheme = theme || storeTheme || 'dark';
 
+  useEffect(() => {
+    const cleanup = usePwaStore.getState().initListeners();
+    return () => cleanup();
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -313,15 +316,8 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
     >
       {/* Main Content Area — No Navbar rendered in Federated mode */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Local Mode Badge */}
-        {isLocalMode && (
-          <div className="flex items-center justify-end">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              Local Mode (Mock DB)
-            </span>
-          </div>
-        )}
+        {/* PWA Offline / Syncing / DLQ Status Banner */}
+        <PwaStatusBanner onSyncComplete={refreshData} />
 
         {/* Wallets Horizontal Shelf */}
         <WalletsShelf wallets={wallets} />
