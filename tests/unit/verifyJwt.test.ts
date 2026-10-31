@@ -57,8 +57,8 @@ describe('HMAC-SHA256 JWT Verification (verifyJwt) & API Security', () => {
       };
       const token = await signJwt(payload, TEST_SECRET);
       const parts = token.split('.');
-      const lastChar = parts[2].slice(-1);
-      const tamperedSig = parts[2].slice(0, -1) + (lastChar === 'A' ? 'B' : 'A');
+      const firstChar = parts[2][0];
+      const tamperedSig = (firstChar === 'A' ? 'B' : 'A') + parts[2].slice(1);
       const tamperedToken = `${parts[0]}.${parts[1]}.${tamperedSig}`;
 
       const result = await verifyJwt(tamperedToken, TEST_SECRET);
@@ -233,3 +233,4 @@ describe('HMAC-SHA256 JWT Verification (verifyJwt) & API Security', () => {
     });
   });
 });
+
