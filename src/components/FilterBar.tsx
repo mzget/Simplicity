@@ -1,7 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { Category } from '../types';
 import { Search, RotateCcw, Filter } from 'lucide-react';
+import { Card } from './ui/card';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 
 interface FilterBarProps {
   categories: Category[];
@@ -33,10 +36,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-3 border border-simplicity-border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+    <Card className="p-2 sm:p-2.5 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div className="flex items-center gap-2 w-full sm:w-auto">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-simplicity-muted">
-          <Filter size={14} className="text-simplicity-teal" />
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground px-1">
+          <Filter size={13} className="text-emerald-500 dark:text-emerald-400" />
           <span>Filters:</span>
         </div>
 
@@ -44,7 +47,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
         <select
           value={selectedCategoryId}
           onChange={(e) => setSelectedCategoryId(e.target.value)}
-          className="text-xs font-semibold p-2 bg-simplicity-canvas rounded-xl border border-simplicity-border text-simplicity-text focus:outline-none"
+          className="text-xs font-medium h-9 px-3 bg-secondary/60 rounded-xl border border-border/80 text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
         >
           <option value="all">All Categories</option>
           {categories.map((c) => (
@@ -56,29 +59,30 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
       <div className="flex items-center gap-2 w-full sm:w-auto">
         {/* Search note & hashtag */}
         <div className="relative flex-1 sm:w-64">
-          <input
+          <Input
             type="text"
             placeholder="Search note or #tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-xs font-medium p-2 pl-8 bg-simplicity-canvas rounded-xl border border-simplicity-border text-simplicity-text focus:outline-none focus:ring-1 focus:ring-simplicity-teal"
+            className="pl-8 text-xs h-9 bg-secondary/50 border-border/80"
           />
-          <Search size={14} className="absolute left-2.5 top-2.5 text-simplicity-muted" />
+          <Search size={14} className="absolute left-2.5 top-2.5 text-muted-foreground pointer-events-none" />
         </div>
 
         {/* Reset Filter Button */}
         {isFiltered && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleReset}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-simplicity-red hover:bg-simplicity-red/10 transition-colors shrink-0"
+            className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0 h-9 px-3 rounded-xl"
             title="Reset All Filters"
           >
             <RotateCcw size={13} />
             <span className="hidden sm:inline">Reset</span>
-          </button>
+          </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 };
-

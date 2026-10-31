@@ -1,8 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { PeriodPreset } from '../types';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO, subMonths, addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
 
 export const DatePeriodBar: React.FC = () => {
   const { datePreset, setDatePreset, startDate, endDate, setDateRange } = useFinanceStore();
@@ -48,48 +50,56 @@ export const DatePeriodBar: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-3 shadow-sm border border-simplicity-border flex flex-col md:flex-row items-center justify-between gap-3">
+    <Card className="p-2 sm:p-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
       {/* Date Stepper */}
-      <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
-        <button
+      <div className="flex items-center gap-1.5 w-full md:w-auto justify-between md:justify-start">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handlePrevMonth}
-          className="p-1.5 rounded-lg hover:bg-simplicity-canvas text-simplicity-text transition-colors"
           title="Previous Month"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
         >
-          <ChevronLeft size={18} />
-        </button>
+          <ChevronLeft size={16} />
+        </Button>
 
-        <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-simplicity-canvas text-sm font-semibold text-simplicity-text">
-          <CalendarIcon size={15} className="text-simplicity-teal" />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/60 border border-border/50 text-xs font-semibold text-foreground">
+          <CalendarIcon size={14} className="text-emerald-500 dark:text-emerald-400" />
           <span>{formatDisplayRange()}</span>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleNextMonth}
-          className="p-1.5 rounded-lg hover:bg-simplicity-canvas text-simplicity-text transition-colors"
           title="Next Month"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
         >
-          <ChevronRight size={18} />
-        </button>
+          <ChevronRight size={16} />
+        </Button>
       </div>
 
       {/* Preset Buttons */}
-      <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
-        {presets.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setDatePreset(p.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-              datePreset === p.id
-                ? 'bg-simplicity-text text-white shadow-sm'
-                : 'text-simplicity-muted hover:text-simplicity-text hover:bg-simplicity-canvas'
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
+      <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
+        {presets.map((p) => {
+          const isActive = datePreset === p.id;
+          return (
+            <Button
+              key={p.id}
+              variant={isActive ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDatePreset(p.id)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
+                isActive 
+                  ? 'bg-emerald-500 text-slate-950 dark:bg-emerald-500 shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+              }`}
+            >
+              {p.label}
+            </Button>
+          );
+        })}
       </div>
-    </div>
+    </Card>
   );
 };
-

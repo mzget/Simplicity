@@ -1,9 +1,12 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { Wallet, Category } from '../types';
 import { CategoryIcon } from './CategoryIcon';
-import { X, Calendar, FileText, Hash, ArrowRightLeft, Sparkles } from 'lucide-react';
+import { Calendar, FileText, Hash, ArrowRightLeft, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 interface AddTransactionModalProps {
   wallets: Wallet[];
@@ -56,7 +59,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, [editingTx, categories, txMode]);
 
-  if (!isAddTxOpen) return null;
+  const handleOpenChange = (open: boolean) => {
+    setIsAddTxOpen(open);
+    if (!open) {
+      setEditingTx(null);
+    }
+  };
 
   const currentCategories = categories.filter((c) => c.type === (txMode === 'income' ? 'income' : 'expense'));
 
@@ -109,17 +117,18 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
-        
+    <Dialog open={isAddTxOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md p-0 overflow-hidden border border-white/10 bg-[#0f172a]/95 text-slate-100 shadow-2xl backdrop-blur-2xl rounded-3xl">
         {/* Header Tabs */}
-        <div className="p-4 bg-simplicity-canvas border-b border-simplicity-border/80 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-simplicity-border shadow-xs">
+        <div className="p-4 bg-slate-900/60 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-1 p-1 bg-slate-950/60 rounded-xl border border-white/5">
             <button
               type="button"
               onClick={() => { setTxMode('expense'); setCategoryId(''); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                txMode === 'expense' ? 'bg-simplicity-red text-white shadow-sm' : 'text-simplicity-muted hover:text-simplicity-text'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                txMode === 'expense' 
+                  ? 'bg-red-500 text-white shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Expense
@@ -127,8 +136,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <button
               type="button"
               onClick={() => { setTxMode('income'); setCategoryId(''); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                txMode === 'income' ? 'bg-simplicity-teal text-white shadow-sm' : 'text-simplicity-muted hover:text-simplicity-text'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                txMode === 'income' 
+                  ? 'bg-emerald-500 text-slate-950 shadow-sm font-bold' 
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Income
@@ -136,49 +147,43 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <button
               type="button"
               onClick={() => setTxMode('transfer')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                txMode === 'transfer' ? 'bg-simplicity-blue text-white shadow-sm' : 'text-simplicity-muted hover:text-simplicity-text'
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                txMode === 'transfer' 
+                  ? 'bg-sky-500 text-white shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Transfer
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
+          <div className="flex items-center gap-1 pr-6">
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => {
                 setIsAddTxOpen(false);
                 setIsAiScanOpen(true);
               }}
-              className="p-1.5 rounded-lg text-simplicity-purple hover:bg-simplicity-purple/10 transition-colors"
+              className="h-8 w-8 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
               title="Scan Receipt with AI"
             >
-              <Sparkles size={17} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsAddTxOpen(false);
-                setEditingTx(null);
-              }}
-              className="p-1.5 rounded-lg text-simplicity-muted hover:text-simplicity-text hover:bg-slate-200/60 transition-colors"
-            >
-              <X size={18} />
-            </button>
+              <Sparkles size={16} />
+            </Button>
           </div>
         </div>
 
         {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 max-h-[75vh]">
           {/* Big Amount Input */}
-          <div className="text-center py-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-simplicity-muted block mb-1">
+          <div className="text-center py-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
               Amount (THB)
             </label>
             <div className="flex items-center justify-center gap-1">
               <span className={`text-3xl font-bold font-mono ${
-                txMode === 'expense' ? 'text-simplicity-red' : txMode === 'income' ? 'text-simplicity-teal' : 'text-simplicity-blue'
+                txMode === 'expense' ? 'text-red-500' : txMode === 'income' ? 'text-emerald-400' : 'text-sky-400'
               }`}>
                 {txMode === 'expense' ? '-' : txMode === 'income' ? '+' : '⇄'}
               </span>
@@ -190,20 +195,20 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 autoFocus
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-48 text-center text-4xl font-extrabold font-mono text-simplicity-text bg-transparent border-b-2 border-slate-200 focus:border-simplicity-teal focus:outline-none transition-colors"
+                className="w-48 text-center text-4xl font-extrabold font-mono text-slate-100 bg-transparent border-b-2 border-white/10 focus:border-emerald-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
 
           {/* Transfer Mode Wallets */}
           {txMode === 'transfer' ? (
-            <div className="grid grid-cols-2 gap-3 p-4 bg-simplicity-canvas rounded-2xl border border-simplicity-border">
+            <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-900/60 rounded-2xl border border-white/5">
               <div>
-                <label className="text-xs font-bold text-simplicity-muted block mb-1">From Wallet</label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">From Wallet</label>
                 <select
                   value={walletId}
                   onChange={(e) => setWalletId(e.target.value)}
-                  className="w-full text-xs font-semibold p-2.5 bg-white rounded-xl border border-simplicity-border text-simplicity-text"
+                  className="w-full text-xs font-medium p-2.5 bg-slate-950/80 rounded-xl border border-white/10 text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>{w.name}</option>
@@ -211,11 +216,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-simplicity-muted block mb-1">To Wallet</label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">To Wallet</label>
                 <select
                   value={targetWalletId}
                   onChange={(e) => setTargetWalletId(e.target.value)}
-                  className="w-full text-xs font-semibold p-2.5 bg-white rounded-xl border border-simplicity-border text-simplicity-text"
+                  className="w-full text-xs font-medium p-2.5 bg-slate-950/80 rounded-xl border border-white/10 text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   {wallets.filter((w) => w.id !== walletId).map((w) => (
                     <option key={w.id} value={w.id}>{w.name}</option>
@@ -226,10 +231,10 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           ) : (
             /* Category Picker Grid */
             <div>
-              <label className="text-xs font-bold text-simplicity-muted uppercase tracking-wider block mb-2">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
                 Category
               </label>
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-40 overflow-y-auto p-1.5 border border-simplicity-border rounded-2xl bg-simplicity-canvas/50">
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-36 overflow-y-auto p-1.5 border border-white/10 rounded-2xl bg-slate-950/40">
                 {currentCategories.map((cat) => {
                   const isSelected = categoryId === cat.id;
                   return (
@@ -239,12 +244,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       onClick={() => setCategoryId(cat.id)}
                       className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all ${
                         isSelected
-                          ? 'bg-white shadow-simplicity ring-2 ring-simplicity-teal'
-                          : 'hover:bg-white/80'
+                          ? 'bg-slate-800 shadow-sm ring-2 ring-emerald-500'
+                          : 'hover:bg-slate-850/60 text-slate-300'
                       }`}
                     >
                       <CategoryIcon name={cat.icon} color={cat.color} size={16} />
-                      <span className="text-[10px] font-semibold text-simplicity-text truncate w-full text-center mt-1">
+                      <span className="text-[10px] font-medium text-slate-300 truncate w-full text-center mt-1">
                         {cat.name}
                       </span>
                     </button>
@@ -255,14 +260,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           )}
 
           {/* Wallet & Date Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {txMode !== 'transfer' && (
               <div>
-                <label className="text-xs font-bold text-simplicity-muted block mb-1">Wallet</label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">Wallet</label>
                 <select
                   value={walletId}
                   onChange={(e) => setWalletId(e.target.value)}
-                  className="w-full text-xs font-semibold p-2.5 bg-white rounded-xl border border-simplicity-border text-simplicity-text focus:outline-none focus:ring-1 focus:ring-simplicity-teal"
+                  className="w-full text-xs font-medium h-9 px-3 bg-slate-900/80 rounded-xl border border-white/10 text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   {wallets.map((w) => (
                     <option key={w.id} value={w.id}>{w.name} ({(w.computed_balance || 0).toLocaleString()} {w.currency})</option>
@@ -272,82 +277,78 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             )}
 
             <div className={txMode === 'transfer' ? 'col-span-2' : ''}>
-              <label className="text-xs font-bold text-simplicity-muted block mb-1">Date & Time</label>
-              <div className="relative">
-                <input
-                  type="datetime-local"
-                  required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full text-xs font-semibold p-2.5 bg-white rounded-xl border border-simplicity-border text-simplicity-text focus:outline-none focus:ring-1 focus:ring-simplicity-teal"
-                />
-              </div>
+              <label className="text-xs font-semibold text-slate-400 block mb-1">Date & Time</label>
+              <Input
+                type="datetime-local"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="text-xs h-9 bg-slate-900/80 border-white/10"
+              />
             </div>
           </div>
 
           {/* Note Input */}
           <div>
-            <label className="text-xs font-bold text-simplicity-muted block mb-1">Note / Description</label>
+            <label className="text-xs font-semibold text-slate-400 block mb-1">Note / Description</label>
             <div className="relative">
-              <input
+              <Input
                 type="text"
                 placeholder="e.g. Lunch with friends, groceries..."
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="w-full text-xs font-medium p-2.5 pl-8 bg-white rounded-xl border border-simplicity-border text-simplicity-text focus:outline-none focus:ring-1 focus:ring-simplicity-teal"
+                className="pl-8 text-xs h-9 bg-slate-900/80 border-white/10"
               />
-              <FileText size={14} className="absolute left-2.5 top-3 text-simplicity-muted" />
+              <FileText size={14} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
             </div>
           </div>
 
           {/* Hashtags Input */}
           <div>
-            <label className="text-xs font-bold text-simplicity-muted block mb-1">Hashtags</label>
+            <label className="text-xs font-semibold text-slate-400 block mb-1">Hashtags</label>
             <div className="relative">
-              <input
+              <Input
                 type="text"
-                placeholder="#food #travel #weekend (space separated)"
+                placeholder="#food #travel #weekend"
                 value={hashtagInput}
                 onChange={(e) => setHashtagInput(e.target.value)}
-                className="w-full text-xs font-medium p-2.5 pl-8 bg-white rounded-xl border border-simplicity-border text-simplicity-text focus:outline-none focus:ring-1 focus:ring-simplicity-teal"
+                className="pl-8 text-xs h-9 bg-slate-900/80 border-white/10"
               />
-              <Hash size={14} className="absolute left-2.5 top-3 text-simplicity-muted" />
+              <Hash size={14} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
             </div>
           </div>
 
           {/* Keep open toggle */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-0.5">
             <input
               type="checkbox"
               id="keepOpen"
               checked={keepOpen}
               onChange={(e) => setKeepOpen(e.target.checked)}
-              className="w-4 h-4 rounded text-simplicity-teal focus:ring-simplicity-teal border-slate-300"
+              className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500 border-white/20 bg-slate-900"
             />
-            <label htmlFor="keepOpen" className="text-xs font-medium text-simplicity-muted cursor-pointer">
+            <label htmlFor="keepOpen" className="text-xs font-medium text-slate-400 cursor-pointer">
               Keep window open to add multiple transactions
             </label>
           </div>
 
           {/* Submit Button */}
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-3 rounded-2xl font-bold text-sm text-white shadow-md transition-all active:scale-98 ${
+            variant={txMode === 'expense' ? 'destructive' : 'default'}
+            className={`w-full h-11 rounded-2xl font-bold text-sm shadow-lg transition-all ${
               txMode === 'expense'
-                ? 'bg-simplicity-red hover:bg-simplicity-red-hover shadow-simplicity-red/20'
+                ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
                 : txMode === 'income'
-                ? 'bg-simplicity-teal hover:bg-simplicity-teal-hover shadow-simplicity-teal/20'
-                : 'bg-simplicity-blue hover:bg-blue-600 shadow-simplicity-blue/20'
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-500/20'
+                : 'bg-sky-500 hover:bg-sky-600 text-white shadow-sky-500/20'
             }`}
           >
             {isSubmitting ? 'Saving...' : editingTx ? 'Update Transaction' : 'Save Transaction'}
-          </button>
+          </Button>
         </form>
-
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
-
-
