@@ -82,7 +82,7 @@ export const WalletsManagerView: React.FC<WalletsManagerViewProps> = ({
                   <div>
                     <h4 className="text-sm font-bold text-simplicity-text">{w.name}</h4>
                     <span className="text-xs text-simplicity-muted font-mono">
-                      Starting: {w.startingBalance.toLocaleString()} {w.currency}
+                      Starting: {(w.startingBalance ?? w.starting_balance ?? 0).toLocaleString()} {w.currency}
                     </span>
                   </div>
                 </div>

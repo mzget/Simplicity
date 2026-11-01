@@ -79,23 +79,29 @@ export const DatePeriodBar: React.FC = () => {
         </Button>
       </div>
 
-      {/* Preset Segmented Track */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 dark:bg-slate-900/60 border border-border/50 backdrop-blur-sm overflow-x-auto scrollbar-none w-full md:w-auto">
+      {/* Preset Filter Chips */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full md:w-auto pb-1 md:pb-0">
         {presets.map((p) => {
           const isActive = datePreset === p.id;
           return (
             <Button
               key={p.id}
-              variant={isActive ? 'default' : 'ghost'}
+              variant="outline"
               size="sm"
               onClick={() => setDatePreset(p.id)}
-              className={`h-7 px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+              className={`h-7 rounded-full px-3 py-1 text-xs font-medium transition-all whitespace-nowrap inline-flex items-center gap-1.5 border shadow-none ${
                 isActive
-                  ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm hover:bg-emerald-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400 font-semibold shadow-[0_0_12px_rgba(16,185,129,0.2)] ring-1 ring-emerald-500/30 hover:bg-emerald-500/25 hover:text-emerald-300'
+                  : 'border-border/60 bg-secondary/30 text-muted-foreground hover:border-border hover:text-foreground hover:bg-secondary/60'
               }`}
             >
-              {p.label}
+              {isActive && (
+                <span
+                  data-testid="glow-dot"
+                  className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse"
+                />
+              )}
+              <span>{p.label}</span>
             </Button>
           );
         })}

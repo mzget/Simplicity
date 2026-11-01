@@ -21,7 +21,7 @@ describe('DatePeriodBar Component', () => {
     expect(screen.getByTitle('Next Month')).toBeInTheDocument();
   });
 
-  it('renders all 5 preset buttons in the segmented track', () => {
+  it('renders all 5 preset filter chips', () => {
     render(<DatePeriodBar />);
 
     expect(screen.getByRole('button', { name: /This Week/i })).toBeInTheDocument();
@@ -31,13 +31,16 @@ describe('DatePeriodBar Component', () => {
     expect(screen.getByRole('button', { name: /All History/i })).toBeInTheDocument();
   });
 
-  it('highlights the active preset and switches when another preset is clicked', () => {
+  it('highlights the active preset chip with glow dot and switches when another chip is clicked', () => {
     render(<DatePeriodBar />);
 
     const thisMonthBtn = screen.getByRole('button', { name: /This Month/i });
     expect(thisMonthBtn.className).toContain('bg-emerald-500');
+    expect(thisMonthBtn.querySelector('[data-testid="glow-dot"]')).toBeInTheDocument();
 
     const thisWeekBtn = screen.getByRole('button', { name: /This Week/i });
+    expect(thisWeekBtn.querySelector('[data-testid="glow-dot"]')).toBeNull();
+
     fireEvent.click(thisWeekBtn);
 
     expect(useFinanceStore.getState().datePreset).toBe('this_week');
@@ -59,4 +62,3 @@ describe('DatePeriodBar Component', () => {
     expect(useFinanceStore.getState().endDate).toBe('2026-11-30');
   });
 });
-
