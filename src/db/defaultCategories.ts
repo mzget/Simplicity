@@ -24,13 +24,15 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   { id: 'cat_education', name: 'Education', type: 'expense', color: '#8E44AD', icon: 'GraduationCap', position: 12, status: 'active' },
   { id: 'cat_gifts', name: 'Gifts & Charity', type: 'expense', color: '#D81B60', icon: 'Gift', position: 13, status: 'active' },
   { id: 'cat_bills', name: 'Utilities & Bills', type: 'expense', color: '#F39C12', icon: 'Zap', position: 14, status: 'active' },
-  { id: 'cat_other_exp', name: 'Other Expenses', type: 'expense', color: '#7F8C8D', icon: 'MoreHorizontal', position: 15, status: 'active' },
+  { id: 'cat_family_personal', name: 'Family & Personal', type: 'expense', color: '#E91E63', icon: 'Heart', position: 15, status: 'active' },
+  { id: 'cat_clothing', name: 'Clothing', type: 'expense', color: '#9B59B6', icon: 'Shirt', position: 16, status: 'active' },
+  { id: 'cat_other_exp', name: 'Other Expenses', type: 'expense', color: '#7F8C8D', icon: 'MoreHorizontal', position: 17, status: 'active' },
 
   // Income Categories
-  { id: 'cat_salary', name: 'Salary', type: 'income', color: '#12C48B', icon: 'Banknote', position: 16, status: 'active' },
-  { id: 'cat_business', name: 'Business Income', type: 'income', color: '#00BCD4', icon: 'Briefcase', position: 17, status: 'active' },
-  { id: 'cat_dividends', name: 'Dividends & Interest', type: 'income', color: '#F1C40F', icon: 'LineChart', position: 18, status: 'active' },
-  { id: 'cat_extra_inc', name: 'Extra Income & Freelance', type: 'income', color: '#3498DB', icon: 'Coins', position: 19, status: 'active' },
-  { id: 'cat_gift_inc', name: 'Gifts Received', type: 'income', color: '#E91E63', icon: 'Gift', position: 20, status: 'active' },
-  { id: 'cat_other_inc', name: 'Other Income', type: 'income', color: '#95A5A6', icon: 'PlusCircle', position: 21, status: 'active' },
+  { id: 'cat_salary', name: 'Salary', type: 'income', color: '#12C48B', icon: 'Banknote', position: 18, status: 'active' },
+  { id: 'cat_business', name: 'Business Income', type: 'income', color: '#00BCD4', icon: 'Briefcase', position: 19, status: 'active' },
+  { id: 'cat_dividends', name: 'Dividends & Interest', type: 'income', color: '#F1C40F', icon: 'LineChart', position: 20, status: 'active' },
+  { id: 'cat_extra_inc', name: 'Extra Income & Freelance', type: 'income', color: '#3498DB', icon: 'Coins', position: 21, status: 'active' },
+  { id: 'cat_gift_inc', name: 'Gifts Received', type: 'income', color: '#E91E63', icon: 'Gift', position: 22, status: 'active' },
+  { id: 'cat_other_inc', name: 'Other Income', type: 'income', color: '#95A5A6', icon: 'PlusCircle', position: 23, status: 'active' },
 ];

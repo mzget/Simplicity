@@ -44,7 +44,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
         </div>
 
         {/* Category Filter Dropdown */}
-        <select
+        <select id="finance-category-filter" name="categoryId"
           value={selectedCategoryId}
           onChange={(e) => setSelectedCategoryId(e.target.value)}
           className="text-xs font-medium h-9 px-3 bg-secondary/60 rounded-xl border border-border/80 text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
@@ -59,7 +59,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
       <div className="flex items-center gap-2 w-full sm:w-auto">
         {/* Search note & hashtag */}
         <div className="relative flex-1 sm:w-64">
-          <Input
+          <Input id="finance-search-input" name="searchQuery"
             type="text"
             placeholder="Search note or #tags..."
             value={searchQuery}

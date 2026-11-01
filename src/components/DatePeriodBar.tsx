@@ -79,8 +79,8 @@ export const DatePeriodBar: React.FC = () => {
         </Button>
       </div>
 
-      {/* Preset Buttons */}
-      <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
+      {/* Preset Segmented Track */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/40 dark:bg-slate-900/60 border border-border/50 backdrop-blur-sm overflow-x-auto scrollbar-none w-full md:w-auto">
         {presets.map((p) => {
           const isActive = datePreset === p.id;
           return (
@@ -89,10 +89,10 @@ export const DatePeriodBar: React.FC = () => {
               variant={isActive ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setDatePreset(p.id)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
-                isActive 
-                  ? 'bg-emerald-500 text-slate-950 dark:bg-emerald-500 shadow-sm' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
+              className={`h-7 px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                isActive
+                  ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm hover:bg-emerald-400'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
               }`}
             >
               {p.label}

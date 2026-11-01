@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { api } from '../api/client';
 import { X, Sparkles, Camera, Check, ArrowRight, Loader2 } from 'lucide-react';
@@ -14,8 +15,6 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({ onAppl
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scannedResult, setScannedResult] = useState<any>(null);
-
-  if (!isAiScanOpen) return null;
 
   const handleScan = async () => {
     setIsScanning(true);
@@ -43,15 +42,15 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({ onAppl
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-md overflow-hidden flex flex-col">
+    <Dialog open={isAiScanOpen} onOpenChange={setIsAiScanOpen}>
+      <DialogContent scheme="light" hideClose aria-describedby={undefined} className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-md overflow-hidden flex flex-col p-0 gap-0 text-slate-900 backdrop-blur-none">
         {/* Header */}
         <div className="p-4 bg-simplicity-purple/10 border-b border-simplicity-purple/20 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-simplicity-purple flex items-center justify-center text-white">
               <Sparkles size={16} />
             </div>
-            <h3 className="text-sm font-bold text-simplicity-text">AI Receipt & Slip Scanner</h3>
+            <DialogTitle className="text-sm font-bold text-simplicity-text leading-normal">AI Receipt & Slip Scanner</DialogTitle>
           </div>
           <button
             onClick={() => setIsAiScanOpen(false)}
@@ -138,8 +137,8 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({ onAppl
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

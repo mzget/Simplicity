@@ -60,7 +60,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
           <div className={`text-2xl font-bold font-mono tracking-tight ${
             isPositiveChange ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
           }`}>
-            {isPositiveChange ? '+' : ''}{stats.periodChange.toLocaleString()} <span className="text-sm font-sans font-normal text-muted-foreground">{currency}</span>
+            {stats.periodChange > 0 ? `+${stats.periodChange.toLocaleString()}` : stats.periodChange.toLocaleString()} <span className="text-sm font-sans font-normal text-muted-foreground">{currency}</span>
           </div>
           <div className="text-[11px] font-mono text-muted-foreground mt-2 flex items-center justify-between border-t border-border/40 pt-2">
             <span>{isPositiveChange ? 'Net surplus' : 'Net deficit'}</span>
@@ -81,7 +81,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
             </div>
           </div>
           <div className="text-2xl font-bold font-mono text-red-500 dark:text-red-400 tracking-tight">
-            -{stats.periodExpense.toLocaleString()} <span className="text-sm font-sans font-normal text-muted-foreground">{currency}</span>
+            {stats.periodExpense > 0 ? `-${stats.periodExpense.toLocaleString()}` : '0'} <span className="text-sm font-sans font-normal text-muted-foreground">{currency}</span>
           </div>
           <div className="text-[11px] font-mono text-muted-foreground mt-2 flex items-center justify-between border-t border-border/40 pt-2">
             <span>Total outflows</span>
@@ -102,7 +102,7 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
             </div>
           </div>
           <div className="text-2xl font-bold font-mono text-emerald-500 dark:text-emerald-400 tracking-tight">
-            +{stats.periodIncome.toLocaleString()} <span className="text-sm font-sans font-normal text-muted-foreground">{currency}</span>
+            {stats.periodIncome > 0 ? `+${stats.periodIncome.toLocaleString()}` : '0'} <span className="text-sm font-sans font-normal text-muted-foreground">{currency}</span>
           </div>
           <div className="text-[11px] font-mono text-muted-foreground mt-2 flex items-center justify-between border-t border-border/40 pt-2">
             <span>Total revenue</span>

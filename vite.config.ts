@@ -26,6 +26,7 @@ function serveFederationAssetsInDev(): Plugin {
               '.svg': 'image/svg+xml',
             };
             res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
             res.setHeader('Access-Control-Allow-Headers', '*');

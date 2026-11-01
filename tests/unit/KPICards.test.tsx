@@ -47,5 +47,18 @@ describe('KPICards Component', () => {
     expect(screen.getByText(/-5,000/i)).toBeInTheDocument();
     expect(screen.getByText(/Net deficit/i)).toBeInTheDocument();
   });
+
+  it('renders zero values cleanly without awkward negative signs', () => {
+    const zeroStats: DashboardStats = {
+      ...mockStats,
+      totalBalance: 0,
+      periodChange: 0,
+      periodIncome: 0,
+      periodExpense: 0,
+    };
+
+    render(<KPICards stats={zeroStats} currency="THB" />);
+    expect(screen.queryByText(/-0/)).not.toBeInTheDocument();
+  });
 });
 

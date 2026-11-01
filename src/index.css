@@ -68,7 +68,7 @@
   --ring: 160 84% 39%;
 
   /* Simplicity Original Tokens */
-  --simplicity-canvas: #0f172a;
+  --simplicity-canvas: #080c14;
   --simplicity-surface: rgba(15, 20, 28, 0.85);
   --simplicity-card: rgba(15, 20, 28, 0.85);
   --simplicity-card-glass: rgba(15, 20, 28, 0.85);
@@ -82,7 +82,7 @@
 
 /* 2. Scoped Container & Element Resets */
 .simplicity-scope {
-  font-family: 'Open Sans', system-ui, -apple-system, sans-serif;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--simplicity-text, #324C5B);
   box-sizing: border-box;
 }
@@ -184,7 +184,7 @@
 
 /* Automatic Oaktree Dark Glass adaptation for standard surface/card classes inside .simplicity-scope.dark */
 .simplicity-scope.dark {
-  background-color: #0f172a;
+  background-color: #080c14;
   color: #f8fafc;
 }
 
@@ -234,7 +234,7 @@
 }
 
 .simplicity-scope.dark select option {
-  background-color: #0f172a;
+  background-color: #080c14;
   color: #f8fafc;
 }
 
@@ -243,7 +243,7 @@
   html:not([data-joy-color-scheme]) body {
     background-color: #F4F7FA;
     color: #324C5B;
-    font-family: 'Open Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
