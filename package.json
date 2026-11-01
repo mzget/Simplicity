@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "spendee:export": "node scripts/extract-spendee.mjs",
     "spendee:import:local": "node scripts/import-spendee-local.mjs",
+    "spendee:import:remote": "node scripts/import-spendee-local.mjs --remote",
     "cf:dev": "wrangler pages dev dist --port 8788 --ip 127.0.0.1",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply simplicity-d1 --local",

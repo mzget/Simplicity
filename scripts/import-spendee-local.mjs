@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /**
- * Spendee Local Database Importer
+ * Spendee Database Importer (Local & Remote D1)
  * Ingests all historical Spendee transactions from spendee_all_transactions.json
- * into Cloudflare D1 Local Database (simplicity-d1) with 100% data fidelity.
+ * into Cloudflare D1 Database (simplicity-d1) with 100% data fidelity.
+ * 
+ * Usage:
+ *   node scripts/import-spendee-local.mjs          # Imports into local D1
+ *   node scripts/import-spendee-local.mjs --remote # Imports into remote D1
  */
 
 import { execSync } from 'child_process';
@@ -14,8 +18,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
+const isRemote = process.argv.includes('--remote');
+const targetFlag = isRemote ? '--remote' : '--local';
+const envLabel = isRemote ? 'Cloudflare D1 Remote Production' : 'Cloudflare D1 Local';
+
 const jsonPath = path.resolve(projectRoot, 'spendee_all_transactions.json');
 const tempSqlPath = path.resolve(__dirname, 'temp-spendee-import.sql');
+const tempVerifyPath = path.resolve(__dirname, 'temp-spendee-verify.sql');
 
 const TARGET_WALLET_ID = '74f0119b-3a4f-42f1-8205-ee3e0a4de051';
 const PRIMARY_USER_ID = 'usr_rattajak_n_gmail_com';
@@ -53,7 +62,7 @@ const escapeSql = (str) => {
 
 async function runImport() {
   console.log('\x1b[36m====================================================\x1b[0m');
-  console.log('\x1b[1m\x1b[32m📥 Simplicity Finance — Spendee Local DB Importer\x1b[0m');
+  console.log(`\x1b[1m\x1b[32m📥 Simplicity Finance — Spendee Importer [${envLabel}]\x1b[0m`);
   console.log('\x1b[36m====================================================\x1b[0m');
 
   if (!fs.existsSync(jsonPath)) {
@@ -136,31 +145,30 @@ WHERE id = '${TARGET_WALLET_ID}';
   fs.writeFileSync(tempSqlPath, fullSql, 'utf-8');
   console.log(`💾 สร้าง SQL Batch File สำเร็จ: ${tempSqlPath} (${(fullSql.length / 1024).toFixed(1)} KB)`);
 
-  // Execute against local D1
-  console.log('⏳ กำลังนำเข้าข้อมูลลงสู่ Cloudflare D1 Local Database (simplicity-d1)...');
+  // Execute against D1
+  console.log(`⏳ กำลังนำเข้าข้อมูลลงสู่ ${envLabel} (simplicity-d1)...`);
   const startTime = Date.now();
 
   try {
-    const cmd = `npx wrangler d1 execute simplicity-d1 --local --file="${tempSqlPath}" --yes`;
+    const cmd = `npx wrangler d1 execute simplicity-d1 ${targetFlag} --file="${tempSqlPath}" --yes`;
     execSync(cmd, { cwd: projectRoot, stdio: 'inherit' });
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`\n\x1b[32m✅ การนำเข้าข้อมูลเสร็จสิ้นเรียบร้อยแล้วในเวลา ${duration} วินาที!\x1b[0m`);
   } catch (err) {
-    console.error('❌ เกิดข้อผิดพลาดในการประมวลผลคำสั่ง D1:', err.message);
+    console.error(`❌ เกิดข้อผิดพลาดในการประมวลผลคำสั่ง D1 (${targetFlag}):`, err.message);
     process.exit(1);
   } finally {
-    // Cleanup temporary file
     if (fs.existsSync(tempSqlPath)) {
       fs.unlinkSync(tempSqlPath);
     }
   }
 
-  // Verification Audit
+  // Verification Audit using a temporary SQL file (guarantees compatibility with both local and remote)
   console.log('\n====================================================');
-  console.log('🔍 ตรวจสอบความถูกต้องของฐานข้อมูล Local D1:');
+  console.log(`🔍 ตรวจสอบความถูกต้องของฐานข้อมูล ${envLabel}:`);
   console.log('====================================================');
 
-  const checkSql = `
+  const verifySql = `
 SELECT 
   count(*) as total_count,
   sum(case when amount > 0 then amount else 0 end) as total_income,
@@ -168,10 +176,21 @@ SELECT
   sum(amount) as net_balance
 FROM transactions 
 WHERE wallet_id = '${TARGET_WALLET_ID}' AND status = 'active';
-  `.trim().replace(/\r?\n/g, ' ');
+
+SELECT 
+  id as wallet_id,
+  user_id,
+  name,
+  currency,
+  starting_balance,
+  current_balance
+FROM wallets 
+WHERE id = '${TARGET_WALLET_ID}';
+  `.trim();
 
   try {
-    const verifyOutput = execSync(`npx wrangler d1 execute simplicity-d1 --local --command "${checkSql}"`, {
+    fs.writeFileSync(tempVerifyPath, verifySql, 'utf-8');
+    const verifyOutput = execSync(`npx wrangler d1 execute simplicity-d1 ${targetFlag} --file="${tempVerifyPath}" --yes`, {
       cwd: projectRoot,
       encoding: 'utf-8',
     });
@@ -180,16 +199,20 @@ WHERE wallet_id = '${TARGET_WALLET_ID}' AND status = 'active';
 
     console.log('====================================================');
     console.log('📊 สรุปผลการตรวจสอบความเที่ยงตรง (Reconciliation Audit):');
+    console.log(`- สภาพแวดล้อม:              ${envLabel}`);
     console.log(`- รายการทั้งหมดในฐานข้อมูล:  ${transactions.length.toLocaleString()} รายการ`);
     console.log(`- ยอดรวมรายรับ (Income):     +${totalIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })} THB`);
     console.log(`- ยอดรวมรายจ่าย (Expense):   -${totalExpense.toLocaleString('th-TH', { minimumFractionDigits: 2 })} THB`);
     console.log(`- ยอดคงเหลือสุทธิ (Net):     +${(totalIncome - totalExpense).toLocaleString('th-TH', { minimumFractionDigits: 2 })} THB`);
     console.log('====================================================');
-    console.log('🎉 ข้อมูลประวัติ Spendee พร้อมสำหรับการเปิดรีวิวบนหน้าเว็บแล้วครับ!');
+    console.log(`🎉 ข้อมูลประวัติ Spendee บน ${envLabel} พร้อมใช้งานสมบูรณ์แล้วครับ!`);
   } catch (err) {
     console.warn('⚠️ ไม่สามารถรัน Query ตรวจสอบได้โดยอัตโนมัติ:', err.message);
+  } finally {
+    if (fs.existsSync(tempVerifyPath)) {
+      fs.unlinkSync(tempVerifyPath);
+    }
   }
 }
 
 runImport();
-
