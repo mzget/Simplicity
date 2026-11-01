@@ -91,7 +91,7 @@ export const DatePeriodBar: React.FC = () => {
               onClick={() => setDatePreset(p.id)}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition-all whitespace-nowrap ${
                 isActive 
-                  ? 'bg-emerald-500 text-slate-950 dark:bg-emerald-500 shadow-sm' 
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.35)]' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary/70'
               }`}
             >

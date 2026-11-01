@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { DashboardStats } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 import { 
@@ -31,13 +31,13 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* 1. Cash Flow History Bar Chart (7 Cols) */}
-      <div className="lg:col-span-7 bg-white rounded-2xl p-5 border border-simplicity-border/80 shadow-simplicity">
+      <div className="lg:col-span-7 bg-card/90 dark:bg-slate-900/60 rounded-2xl p-5 border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-simplicity-teal/10 flex items-center justify-center text-simplicity-teal">
               <BarChart3 size={16} />
             </div>
-            <h3 className="text-sm font-bold text-simplicity-text">Cash Flow Dynamics</h3>
+            <h3 className="text-sm font-bold text-simplicity-text dark:text-slate-100">Cash Flow Dynamics</h3>
           </div>
           <div className="flex items-center gap-3 text-xs font-semibold">
             <span className="flex items-center gap-1.5 text-simplicity-teal">
@@ -51,8 +51,14 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
 
         <div className="h-64 w-full">
           {formattedBarData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-simplicity-muted text-sm">
-              No cash flow activity in this period.
+            <div className="h-full flex flex-col items-center justify-center text-center p-6">
+              <div className="w-11 h-11 rounded-2xl bg-secondary/50 dark:bg-slate-800/60 border border-border/60 dark:border-white/10 flex items-center justify-center text-muted-foreground mb-2.5 shadow-inner">
+                <BarChart3 size={20} className="text-emerald-500 opacity-80" />
+              </div>
+              <p className="text-xs font-semibold text-foreground">No cash flow activity in this period</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xs">
+                Transactions recorded within the selected date range will appear here.
+              </p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -75,7 +81,7 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-white p-3 rounded-xl shadow-simplicity border border-simplicity-border text-xs">
+                        <div className="bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md p-3 rounded-xl shadow-xl border border-white/10 text-xs text-slate-100">
                           <div className="font-bold text-simplicity-text mb-1.5">{data.date}</div>
                           <div className="text-simplicity-teal font-semibold">
                             Income: +{data.income.toLocaleString()} {currency}
@@ -101,13 +107,13 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
       </div>
 
       {/* 2. Expense Category Breakdown Donut & Ranked List (5 Cols) */}
-      <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-simplicity-border/80 shadow-simplicity flex flex-col">
+      <div className="lg:col-span-5 bg-card/90 dark:bg-slate-900/60 rounded-2xl p-5 border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-simplicity-red/10 flex items-center justify-center text-simplicity-red">
               <PieChartIcon size={16} />
             </div>
-            <h3 className="text-sm font-bold text-simplicity-text">Expenses by Category</h3>
+            <h3 className="text-sm font-bold text-simplicity-text dark:text-slate-100">Expenses by Category</h3>
           </div>
           <span className="text-xs font-bold text-simplicity-muted">
             {categoryBreakdown.length} Categories
@@ -115,8 +121,14 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
         </div>
 
         {categoryBreakdown.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-simplicity-muted text-sm py-12">
-            No expenses recorded for this period.
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-6 py-10">
+            <div className="w-11 h-11 rounded-2xl bg-secondary/50 dark:bg-slate-800/60 border border-border/60 dark:border-white/10 flex items-center justify-center text-muted-foreground mb-2.5 shadow-inner">
+              <PieChartIcon size={20} className="text-red-400 opacity-80" />
+            </div>
+            <p className="text-xs font-semibold text-foreground">No expenses recorded for this period</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xs">
+              Categorized outflows will be summarized in a visual breakdown.
+            </p>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -143,7 +155,7 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
                         const data = payload[0].payload;
                         const pct = periodExpense > 0 ? Math.round((data.total / periodExpense) * 100) : 0;
                         return (
-                          <div className="bg-white p-2.5 rounded-xl shadow-simplicity border border-simplicity-border text-xs">
+                          <div className="bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-md p-2.5 rounded-xl shadow-xl border border-white/10 text-xs text-slate-100">
                             <span className="font-bold" style={{ color: data.color }}>{data.name}</span>
                             <div className="font-mono font-bold mt-0.5">
                               {data.total.toLocaleString()} {currency} ({pct}%)

@@ -48,10 +48,10 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
         {/* All Wallets Summary Card */}
         <div
           onClick={() => setSelectedWalletId('all')}
-          className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white simplicity-glass-card ${
+          className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-card/90 dark:bg-slate-900/60 simplicity-glass-card backdrop-blur-xl ${
             selectedWalletId === 'all'
-              ? 'ring-2 ring-simplicity-teal dark:ring-emerald-500 border-transparent shadow-simplicity'
-              : 'border-simplicity-border/80 hover:border-simplicity-teal/40 hover:shadow-sm'
+              ? 'ring-2 ring-emerald-500 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-gradient-to-br from-emerald-950/20 via-transparent to-transparent'
+              : 'border-border/80 dark:border-white/10 hover:border-emerald-500/40 hover:shadow-md'
           }`}
         >
           <div className="flex items-center justify-between mb-2">
@@ -84,8 +84,8 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
               onClick={() => setSelectedWalletId(wallet.id)}
               className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white simplicity-glass-card relative overflow-hidden ${
                 isSelected
-                  ? 'ring-2 ring-simplicity-teal dark:ring-emerald-500 border-transparent shadow-simplicity'
-                  : 'border-simplicity-border/80 hover:border-simplicity-teal/40 hover:shadow-sm'
+                  ? 'ring-2 ring-emerald-500 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-gradient-to-br from-emerald-950/20 via-transparent to-transparent'
+                  : 'border-border/80 dark:border-white/10 hover:border-emerald-500/40 hover:shadow-md'
               }`}
             >
               {/* Colored top accent bar */}
@@ -124,12 +124,12 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
         {/* Add New Wallet Quick Button */}
         <div
           onClick={() => setIsAddWalletOpen(true)}
-          className="cursor-pointer rounded-2xl p-4 border-2 border-dashed border-simplicity-border hover:border-simplicity-teal/60 bg-simplicity-canvas/50 hover:bg-simplicity-canvas flex flex-col items-center justify-center text-center transition-all min-h-[105px]"
+          className="cursor-pointer rounded-2xl p-4 border border-dashed border-border/80 dark:border-white/15 hover:border-emerald-500/60 bg-secondary/30 hover:bg-secondary/60 dark:bg-slate-900/30 dark:hover:bg-slate-900/60 flex flex-col items-center justify-center text-center transition-all min-h-[105px] group"
         >
-          <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-simplicity-muted mb-1.5">
+          <div className="w-8 h-8 rounded-full bg-secondary dark:bg-slate-800 border border-border/60 dark:border-white/10 shadow-sm flex items-center justify-center text-muted-foreground group-hover:text-emerald-400 group-hover:border-emerald-500/40 transition-colors mb-1.5">
             <Plus size={16} />
           </div>
-          <span className="text-xs font-bold text-simplicity-muted">Connect / Add Wallet</span>
+          <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">Connect / Add Wallet</span>
         </div>
       </div>
     </div>

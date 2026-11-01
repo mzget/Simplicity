@@ -52,11 +52,11 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
 
   if (transactions.length === 0) {
     return (
-      <div className="bg-white rounded-2xl p-10 border border-simplicity-border/80 text-center shadow-simplicity">
-        <div className="w-12 h-12 rounded-full bg-simplicity-canvas mx-auto flex items-center justify-center text-simplicity-muted mb-3">
+      <div className="bg-card/90 dark:bg-slate-900/60 rounded-2xl p-10 border border-border/80 dark:border-white/10 text-center shadow-simplicity simplicity-glass-card backdrop-blur-xl">
+        <div className="w-12 h-12 rounded-2xl bg-secondary/50 dark:bg-slate-800/60 border border-border/60 dark:border-white/10 mx-auto flex items-center justify-center text-muted-foreground mb-3 shadow-inner">
           <ArrowRightLeft size={22} />
         </div>
-        <h3 className="text-base font-bold text-simplicity-text">No transactions found</h3>
+        <h3 className="text-base font-bold text-simplicity-text dark:text-slate-100">No transactions found</h3>
         <p className="text-xs text-simplicity-muted mt-1 max-w-sm mx-auto">
           No records match your current wallet, date range, or search criteria.
         </p>
@@ -71,9 +71,9 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
         const isSumPositive = dailySum >= 0;
 
         return (
-          <div key={dateKey} className="bg-white rounded-2xl border border-simplicity-border/80 shadow-simplicity overflow-hidden">
+          <div key={dateKey} className="bg-card/90 dark:bg-slate-900/60 rounded-2xl border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl overflow-hidden">
             {/* Group Header */}
-            <div className="px-5 py-3 bg-simplicity-canvas/60 border-b border-simplicity-border/60 flex items-center justify-between">
+            <div className="px-5 py-3 bg-secondary/40 dark:bg-slate-800/40 border-b border-border/60 dark:border-white/10 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-simplicity-muted">
                 {formatDateHeader(dateKey)}
               </span>

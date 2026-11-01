@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { simplicityFetch } from '../api/client';
 import { Wallet, Category } from '../types';
@@ -22,8 +23,6 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
   const [selectedWalletId, setSelectedWalletId] = useState<string>(wallets[0]?.id || '');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
-
-  if (!isImportOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,15 +94,15 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+    <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+      <DialogContent scheme="light" hideClose aria-describedby={undefined} className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] p-0 gap-0 text-slate-900 backdrop-blur-none">
         {/* Header */}
         <div className="p-4 bg-simplicity-canvas border-b border-simplicity-border/80 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-simplicity-text flex items-center justify-center text-white">
               <FileSpreadsheet size={16} />
             </div>
-            <h3 className="text-sm font-bold text-simplicity-text">Import CSV Transactions</h3>
+            <DialogTitle className="text-sm font-bold text-simplicity-text leading-normal">Import CSV Transactions</DialogTitle>
           </div>
           <button
             onClick={() => setIsImportOpen(false)}
@@ -202,8 +201,8 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
             {isProcessing ? 'Importing...' : `Import ${parsedRows.length} Rows`}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

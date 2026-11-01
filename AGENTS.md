@@ -37,3 +37,13 @@ The agent is explicitly authorized and encouraged to:
 
 ### 2. E2E Test Coverage Rule
 - เมื่อมีหน้าจอใหม่ หรือ Module ใด ๆ ถูกแก้ไข หรือสร้างใหม่ ต้องเขียน E2E Test ครอบคลุมการแสดงผลและ User Flows ของหน้าจอนั้น ๆ เสมอ (Must ALWAYS include E2E test coverage whenever screens or modules are added or modified).
+
+---
+
+## 🧩 UI Component & Design System Rules (Library-First Convention)
+
+### 1. Library & Primitive Reuse Rule (Strict No-Bespoke-Primitives)
+- **ห้ามสร้าง Component พื้นฐานหรือ Wrapper ซ้ำซ้อนขึ้นมาเองโดยพลการ**:
+  - ก่อนสร้างหรือแก้ Component, Dialog, Modal, Input, Button, Dropdown, Tooltip หรือ Portals ให้ตรวจสอบและนำ Component Primitives ที่มีอยู่แล้วในโปรเจกต์มาใช้เป็นอันดับแรกเสมอ (เช่น `src/components/ui/*`, `@radix-ui/*`, `lucide-react`)
+  - **Single Convention Pattern**: ต้องใช้ Pattern และ Primitives เดียวกันทั้งโปรเจกต์ เช่น ทุก Modal/Dialog ต้องใช้ Radix UI `Dialog` (`DialogContent`, `DialogTitle`) ร่วมกัน ห้ามเขียน custom `fixed inset-0` div หรือ bespoke portal ขึ้นมาเฉพาะจุด
+  - หากจำเป็นต้องขยายความสามารถ ให้เพิ่ม props หรือ variant บน existing component ใน `src/components/ui/` แทนการแตกไฟล์ wrapper ใหม่

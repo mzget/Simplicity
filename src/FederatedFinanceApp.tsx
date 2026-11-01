@@ -311,7 +311,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
       ref={containerRef}
       className={clsx(
         'simplicity-scope min-h-screen flex flex-col font-sans transition-colors duration-200',
-        activeTheme === 'dark' ? 'dark bg-[#0f172a] text-slate-100' : 'bg-simplicity-canvas text-simplicity-text'
+        activeTheme === 'dark' ? 'dark bg-[#080c14] text-slate-100' : 'bg-simplicity-canvas text-simplicity-text'
       )}
     >
       {/* Main Content Area — No Navbar rendered in Federated mode */}

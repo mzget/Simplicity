@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { X, Landmark, Wallet as WalletIcon, CreditCard, Coins, PiggyBank } from 'lucide-react';
 
@@ -15,8 +16,6 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ onAddWallet }) =
   const [startingBalance, setStartingBalance] = useState('');
   const [color, setColor] = useState('#12C48B');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  if (!isAddWalletOpen) return null;
 
   const colorPalette = [
     '#12C48B', '#2ECC71', '#38A3F1', '#2980B9', '#9065ED',
@@ -46,8 +45,8 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ onAddWallet }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-md overflow-hidden">
+    <Dialog open={isAddWalletOpen} onOpenChange={setIsAddWalletOpen}>
+      <DialogContent scheme="light" hideClose aria-describedby={undefined} className="bg-white rounded-3xl shadow-simplicity-modal border border-simplicity-border w-full max-w-md overflow-hidden p-0 gap-0 text-slate-900 backdrop-blur-none">
         
         {/* Header */}
         <div className="p-4 bg-simplicity-canvas border-b border-simplicity-border/80 flex items-center justify-between">
@@ -55,7 +54,7 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ onAddWallet }) =
             <div className="w-8 h-8 rounded-xl bg-simplicity-teal flex items-center justify-center text-white">
               <WalletIcon size={16} />
             </div>
-            <h3 className="text-sm font-bold text-simplicity-text">Add New Wallet</h3>
+            <DialogTitle className="text-sm font-bold text-simplicity-text leading-normal">Add New Wallet</DialogTitle>
           </div>
           <button
             type="button"
@@ -152,8 +151,8 @@ export const AddWalletModal: React.FC<AddWalletModalProps> = ({ onAddWallet }) =
           </button>
         </form>
 
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
