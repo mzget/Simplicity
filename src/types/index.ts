@@ -8,6 +8,8 @@ export interface Wallet {
   type: 'cash' | 'bank' | 'credit' | 'savings' | 'crypto';
   currency: string;
   startingBalance: number;
+  /** Raw snake_case column returned by the D1 API (SELECT w.*). */
+  starting_balance?: number;
   currentBalance: number;
   computed_balance?: number;
   color: string;
