@@ -606,10 +606,12 @@ export const api = {
           txs = txs.filter((t) => t.category_id === filters.categoryId);
         }
         if (filters?.startDate) {
-          txs = txs.filter((t) => t.start_date >= filters.startDate!);
+          const start = filters.startDate.slice(0, 10);
+          txs = txs.filter((t) => t.start_date.slice(0, 10) >= start);
         }
         if (filters?.endDate) {
-          txs = txs.filter((t) => t.start_date <= filters.endDate!);
+          const end = filters.endDate.slice(0, 10);
+          txs = txs.filter((t) => t.start_date.slice(0, 10) <= end);
         }
         if (filters?.search) {
           const q = filters.search.toLowerCase();
@@ -732,11 +734,17 @@ export const api = {
         const txs: Transaction[] = JSON.parse(raw);
         const idx = txs.findIndex((t) => t.id === id);
         if (idx !== -1) {
+          const updatedStartDate = data.start_date || data.startDate || txs[idx].start_date;
           txs[idx] = {
             ...txs[idx],
             ...data,
-            wallet_id: data.walletId || txs[idx].wallet_id,
-            category_id: data.categoryId || txs[idx].category_id,
+            wallet_id: data.walletId || data.wallet_id || txs[idx].wallet_id,
+            category_id: data.categoryId || data.category_id || txs[idx].category_id,
+            start_date: updatedStartDate,
+            startDate: updatedStartDate,
+            amount: data.amount !== undefined ? Number(data.amount) : txs[idx].amount,
+            note: data.note !== undefined ? data.note : txs[idx].note,
+            hashtags: data.hashtags !== undefined ? data.hashtags : txs[idx].hashtags,
             is_pending: 1,
             updated_at: new Date().toISOString(),
           };
@@ -760,11 +768,17 @@ export const api = {
           const txs: Transaction[] = JSON.parse(raw);
           const idx = txs.findIndex((t) => t.id === id);
           if (idx !== -1) {
+            const updatedStartDate = data.start_date || data.startDate || txs[idx].start_date;
             txs[idx] = {
               ...txs[idx],
               ...data,
-              wallet_id: data.walletId || txs[idx].wallet_id,
-              category_id: data.categoryId || txs[idx].category_id,
+              wallet_id: data.walletId || data.wallet_id || txs[idx].wallet_id,
+              category_id: data.categoryId || data.category_id || txs[idx].category_id,
+              start_date: updatedStartDate,
+              startDate: updatedStartDate,
+              amount: data.amount !== undefined ? Number(data.amount) : txs[idx].amount,
+              note: data.note !== undefined ? data.note : txs[idx].note,
+              hashtags: data.hashtags !== undefined ? data.hashtags : txs[idx].hashtags,
               updated_at: new Date().toISOString(),
             };
             localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txs));

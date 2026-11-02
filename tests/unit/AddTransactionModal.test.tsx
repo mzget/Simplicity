@@ -65,9 +65,11 @@ describe('AddTransactionModal', () => {
 
   it('renders mode tabs, amount field without number spinner, and footer controls', () => {
     renderModal();
-    expect(screen.getByRole('tab', { name: 'Expense' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: 'Income' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Transfer' })).toBeInTheDocument();
+    const expenseTab = screen.getByRole('tab', { name: /Expense/i });
+    expect(expenseTab).toHaveAttribute('aria-selected', 'true');
+    expect(expenseTab.className).toContain('!bg-rose-500');
+    expect(screen.getByRole('tab', { name: /Income/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Transfer/i })).toBeInTheDocument();
 
     const amount = screen.getByLabelText(/Amount \(THB\)/i);
     expect(amount).toHaveAttribute('type', 'text');
@@ -77,13 +79,35 @@ describe('AddTransactionModal', () => {
     expect(screen.getByRole('button', { name: 'Save Transaction' })).toBeInTheDocument();
   });
 
-  it('is a responsive bottom sheet on mobile and centered dialog on desktop', () => {
+  it('clearly highlights active tab with distinct styles for Expense, Income, and Transfer', () => {
+    renderModal();
+    const expenseTab = screen.getByRole('tab', { name: /Expense/i });
+    const incomeTab = screen.getByRole('tab', { name: /Income/i });
+    const transferTab = screen.getByRole('tab', { name: /Transfer/i });
+
+    // Expense is active initially
+    expect(expenseTab.className).toContain('!bg-rose-500');
+    expect(incomeTab.className).not.toContain('!bg-');
+
+    // Switch to Income
+    fireEvent.click(incomeTab);
+    expect(incomeTab).toHaveAttribute('aria-selected', 'true');
+    expect(incomeTab.className).toContain('!bg-emerald-500');
+    expect(expenseTab.className).not.toContain('!bg-');
+
+    // Switch to Transfer
+    fireEvent.click(transferTab);
+    expect(transferTab).toHaveAttribute('aria-selected', 'true');
+    expect(transferTab.className).toContain('!bg-sky-500');
+    expect(incomeTab.className).not.toContain('!bg-');
+  });
+
+  it('is a centered dialog on desktop', () => {
     renderModal();
     const cls = screen.getByTestId('add-transaction-modal').className;
-    expect(cls).toContain('bottom-0');
-    expect(cls).toContain('rounded-t-3xl');
-    expect(cls).toContain('sm:max-w-lg');
-    expect(cls).toContain('sm:-translate-y-1/2');
+    expect(cls).toContain('max-w-lg');
+    expect(cls).toContain('rounded-3xl');
+    expect(cls).toContain('-translate-y-1/2');
   });
 
   it('sanitizes amount input to digits and a single decimal point', () => {
@@ -112,7 +136,7 @@ describe('AddTransactionModal', () => {
     expect(screen.getByTitle('Expense 0')).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('submits an expense as a negative amount with parsed hashtags', async () => {
+  it('submits an expense as a negative amount with parsed hashtags and date', async () => {
     const { onSave } = renderModal();
     typeAmount('150');
     fireEvent.change(screen.getByLabelText('Note / Description'), { target: { value: 'Lunch' } });
@@ -130,6 +154,8 @@ describe('AddTransactionModal', () => {
         amount: -150,
         note: 'Lunch',
         hashtags: ['#food', '#weekend'],
+        startDate: expect.any(String),
+        start_date: expect.any(String),
       })
     );
     await waitFor(() => expect(useFinanceStore.getState().isAddTxOpen).toBe(false));
@@ -137,7 +163,7 @@ describe('AddTransactionModal', () => {
 
   it('submits income as a positive amount using income categories', async () => {
     const { onSave } = renderModal();
-    fireEvent.click(screen.getByRole('tab', { name: 'Income' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Income/i }));
     typeAmount('900');
     expect(screen.getByTitle('Salary')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Show all/i })).not.toBeInTheDocument();
@@ -149,7 +175,7 @@ describe('AddTransactionModal', () => {
 
   it('transfer mode shows from/to wallets, hides category and calls onTransfer', async () => {
     const { onSave, onTransfer } = renderModal();
-    fireEvent.click(screen.getByRole('tab', { name: 'Transfer' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Transfer/i }));
     expect(screen.queryByRole('radiogroup', { name: 'Category' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('From Wallet')).toBeInTheDocument();
     expect(screen.getByLabelText('To Wallet')).toBeInTheDocument();
@@ -163,11 +189,53 @@ describe('AddTransactionModal', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it('does not submit when amount is empty or zero', async () => {
+  it('validates and shows error alert when amount is empty or zero', async () => {
     const { onSave } = renderModal();
     typeAmount('0');
-    fireEvent.submit(screen.getByRole('button', { name: 'Save Transaction' }).closest('form')!);
-    await Promise.resolve();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Transaction' }));
+    
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/Amount must be greater than 0/i);
+    });
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('validates and shows error alert when amount exceeds limit', async () => {
+    const { onSave } = renderModal();
+    typeAmount('1000000000');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Transaction' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/Amount cannot exceed 999,999,999/i);
+    });
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('validates transfer mode when source and destination wallet are identical', async () => {
+    const { onTransfer } = renderModal();
+    fireEvent.click(screen.getByRole('tab', { name: /Transfer/i }));
+    typeAmount('200');
+
+    // Set to-wallet to match from-wallet
+    fireEvent.change(screen.getByLabelText('To Wallet'), { target: { value: 'w1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Transaction' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/Source and destination wallets must be different/i);
+    });
+    expect(onTransfer).not.toHaveBeenCalled();
+  });
+
+  it('validates note length not exceeding 255 characters', async () => {
+    const { onSave } = renderModal();
+    typeAmount('100');
+    const longNote = 'A'.repeat(256);
+    fireEvent.change(screen.getByLabelText('Note / Description'), { target: { value: longNote } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Transaction' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/Note cannot exceed 255 characters/i);
+    });
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -184,7 +252,7 @@ describe('AddTransactionModal', () => {
     expect(useFinanceStore.getState().isAddTxOpen).toBe(true);
   });
 
-  it('prefills fields and shows Update button when editing', () => {
+  it('prefills fields and updates transaction with modified date', async () => {
     useFinanceStore.setState({
       editingTx: {
         id: 't1',
@@ -199,11 +267,31 @@ describe('AddTransactionModal', () => {
         hashtags: ['#ride'],
       } as any,
     });
-    renderModal();
-    expect(screen.getByLabelText(/Amount \(THB\)/i)).toHaveValue('75');
+    const { onSave } = renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Amount \(THB\)/i)).toHaveValue('75');
+    });
     expect(screen.getByLabelText('Note / Description')).toHaveValue('Taxi');
     expect(screen.getByLabelText('Hashtags')).toHaveValue('#ride');
     expect(screen.getByRole('button', { name: 'Update Transaction' })).toBeInTheDocument();
+
+    // User changes date
+    fireEvent.change(screen.getByLabelText('Date & Time'), { target: { value: '2026-11-05T14:30' } });
+    expect(screen.getByLabelText('Date & Time')).toHaveValue('2026-11-05T14:30');
+
+    // User submits update
+    fireEvent.click(screen.getByRole('button', { name: 'Update Transaction' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 't1',
+        startDate: '2026-11-05T14:30',
+        start_date: '2026-11-05T14:30',
+        amount: -75,
+      })
+    );
   });
 
   it('applies light surface classes without the dark scope in light theme', () => {
@@ -233,4 +321,3 @@ describe('AddTransactionModal', () => {
     expect(useFinanceStore.getState().isAiScanOpen).toBe(true);
   });
 });
-

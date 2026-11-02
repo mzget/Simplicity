@@ -615,12 +615,12 @@ app.get('/transactions', async (c) => {
     params.push(categoryId);
   }
   if (startDate) {
-    query += ` AND t.start_date >= ?`;
-    params.push(startDate);
+    query += ' AND substr(t.start_date, 1, 10) >= ?';
+    params.push(startDate.slice(0, 10));
   }
   if (endDate) {
-    query += ` AND t.start_date <= ?`;
-    params.push(endDate);
+    query += ' AND substr(t.start_date, 1, 10) <= ?';
+    params.push(endDate.slice(0, 10));
   }
   if (search) {
     query += ` AND (t.note LIKE ? OR t.hashtags LIKE ? OR t.place LIKE ?)`;
@@ -706,15 +706,15 @@ app.put('/transactions/:id', async (c) => {
         updated_at = ?
     WHERE id = ? AND user_id = ?
   `).bind(
-    body.walletId,
-    body.categoryId,
-    body.amount !== undefined ? Number(body.amount) : null,
-    body.currency,
-    body.startDate,
-    body.note,
-    body.place,
-    body.hashtags ? JSON.stringify(body.hashtags) : null,
-    body.imageUrl,
+    body.walletId ?? body.wallet_id ?? null,
+    body.categoryId ?? body.category_id ?? null,
+    body.amount !== undefined && body.amount !== null ? Number(body.amount) : null,
+    body.currency ?? null,
+    body.startDate ?? body.start_date ?? null,
+    body.note ?? null,
+    body.place ?? null,
+    body.hashtags ? (typeof body.hashtags === 'string' ? body.hashtags : JSON.stringify(body.hashtags)) : null,
+    body.imageUrl ?? body.image_url ?? null,
     now,
     id,
     user.id
@@ -967,12 +967,12 @@ app.get('/stats/dashboard', async (c) => {
     params.push(walletId);
   }
   if (startDate) {
-    txQuery += ` AND t.start_date >= ?`;
-    params.push(startDate);
+    txQuery += ' AND substr(t.start_date, 1, 10) >= ?';
+    params.push(startDate.slice(0, 10));
   }
   if (endDate) {
-    txQuery += ` AND t.start_date <= ?`;
-    params.push(endDate);
+    txQuery += ' AND substr(t.start_date, 1, 10) <= ?';
+    params.push(endDate.slice(0, 10));
   }
   txQuery += ` ORDER BY t.start_date ASC`;
 

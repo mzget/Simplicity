@@ -52,3 +52,15 @@ The agent is explicitly authorized and encouraged to:
   - ก่อนสร้างหรือแก้ Component, Dialog, Modal, Input, Button, Dropdown, Tooltip หรือ Portals ให้ตรวจสอบและนำ Component Primitives ที่มีอยู่แล้วในโปรเจกต์มาใช้เป็นอันดับแรกเสมอ (เช่น `src/components/ui/*`, `@radix-ui/*`, `lucide-react`)
   - **Single Convention Pattern**: ต้องใช้ Pattern และ Primitives เดียวกันทั้งโปรเจกต์ เช่น ทุก Modal/Dialog ต้องใช้ Radix UI `Dialog` (`DialogContent`, `DialogTitle`) ร่วมกัน ห้ามเขียน custom `fixed inset-0` div หรือ bespoke portal ขึ้นมาเฉพาะจุด
   - หากจำเป็นต้องขยายความสามารถ ให้เพิ่ม props หรือ variant บน existing component ใน `src/components/ui/` แทนการแตกไฟล์ wrapper ใหม่
+
+---
+
+## 📅 Date & Time Handling Rules (`date-fns` Enforcement)
+
+### 1. Mandatory `date-fns` Primitives (No Bespoke Date Logic)
+- **ห้ามจัดการหรือเปรียบเทียบวันและเวลาด้วย bespoke logic หรือ raw string comparison โดยเด็ดขาด**:
+  - ต้องใช้ **`date-fns`** สำหรับการคำนวณ, formatting, parsing, และ comparison ทั้งหมดในโปรเจกต์
+  - **Date Boundaries & Presets**: เมื่อคำนวณช่วงเวลา (เช่น This Month, Last Month, This Week) ต้องใช้ฟังก์ชันของ `date-fns` เสมอ (`startOfMonth`, `endOfMonth`, `startOfWeek`, `endOfWeek`, `subMonths`, `addMonths`, `startOfDay`, `endOfDay`)
+  - **Formatting & Parsing**: ใช้ `format` และ `parseISO` สำหรับแปลงรูปแบบวันที่ ห้ามเขียน custom regex หรือ substring สำหรับวันเวลาเองโดยไม่จำเป็น
+  - **Interval & Boundary Comparisons**: สำหรับการตรวจสอบ Transaction หรือข้อมูลที่อยู่ภายในช่วงเวลา ให้ใช้ date boundary primitives หรือ normalize วันที่ให้อยู่ในระดับ Day (`yyyy-MM-dd`) ป้องกันข้อผิดพลาดที่เกิดจาก Time Component/Timezone Offset (เช่น วันสุดท้ายของเดือนถูกตัดทิ้งเพราะมีเวลาต่อท้าย)
+

@@ -33,11 +33,19 @@ export const DialogContent = React.forwardRef<
     /** Color scheme of the dialog surface. Defaults to 'dark' (existing behavior). */
     scheme?: 'dark' | 'light';
   }
->(({ className, children, hideClose = false, scheme = 'dark', ...props }, ref) => (
+>(({ className, children, hideClose = false, scheme = 'dark', onOpenAutoFocus, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      onOpenAutoFocus={(e) => {
+        // Prevent aggressive focus locking on mobile viewports to eliminate
+        // bidirectional focus trap conflicts with host drawer/sidebar modals
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+          e.preventDefault();
+        }
+        onOpenAutoFocus?.(e);
+      }}
       className={cn(
         'simplicity-scope',
         scheme === 'dark' && 'dark',
