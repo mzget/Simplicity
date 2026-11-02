@@ -102,13 +102,12 @@ describe('AddTransactionModal', () => {
     expect(incomeTab.className).not.toContain('!bg-');
   });
 
-  it('is a responsive bottom sheet on mobile and centered dialog on desktop', () => {
+  it('is a centered dialog on desktop', () => {
     renderModal();
     const cls = screen.getByTestId('add-transaction-modal').className;
-    expect(cls).toContain('bottom-0');
-    expect(cls).toContain('rounded-t-3xl');
-    expect(cls).toContain('sm:max-w-lg');
-    expect(cls).toContain('sm:-translate-y-1/2');
+    expect(cls).toContain('max-w-lg');
+    expect(cls).toContain('rounded-3xl');
+    expect(cls).toContain('-translate-y-1/2');
   });
 
   it('sanitizes amount input to digits and a single decimal point', () => {

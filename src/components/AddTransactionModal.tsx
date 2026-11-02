@@ -86,8 +86,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         data-testid="add-transaction-modal"
         aria-describedby={undefined}
         className={`${t.surface} flex flex-col gap-0 p-0 overflow-hidden shadow-2xl backdrop-blur-2xl
-          inset-x-0 bottom-0 top-auto left-0 w-full max-w-full max-h-[92dvh] translate-x-0 translate-y-0 rounded-b-none rounded-t-3xl
-          sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:max-w-lg sm:max-h-[90vh] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl`}
+          inset-auto left-[50%] top-[50%] max-w-lg max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-3xl`}
       >
         <DialogTitle className="sr-only">
           {editingTx ? 'Edit Transaction' : 'Add Transaction'}
