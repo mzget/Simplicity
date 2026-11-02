@@ -111,19 +111,19 @@
   padding: 0;
 }
 
-.simplicity-scope button,
-.simplicity-scope [type='button'],
-.simplicity-scope [type='reset'],
-.simplicity-scope [type='submit'] {
+:where(.simplicity-scope) button,
+:where(.simplicity-scope) [type='button'],
+:where(.simplicity-scope) [type='reset'],
+:where(.simplicity-scope) [type='submit'] {
   background-color: transparent;
   background-image: none;
   cursor: pointer;
 }
 
-.simplicity-scope button:disabled,
-.simplicity-scope [type='button']:disabled,
-.simplicity-scope [type='reset']:disabled,
-.simplicity-scope [type='submit']:disabled {
+:where(.simplicity-scope) button:disabled,
+:where(.simplicity-scope) [type='button']:disabled,
+:where(.simplicity-scope) [type='reset']:disabled,
+:where(.simplicity-scope) [type='submit']:disabled {
   cursor: default;
 }
 

@@ -706,15 +706,15 @@ app.put('/transactions/:id', async (c) => {
         updated_at = ?
     WHERE id = ? AND user_id = ?
   `).bind(
-    body.walletId,
-    body.categoryId,
-    body.amount !== undefined ? Number(body.amount) : null,
-    body.currency,
-    body.startDate,
-    body.note,
-    body.place,
-    body.hashtags ? JSON.stringify(body.hashtags) : null,
-    body.imageUrl,
+    body.walletId ?? body.wallet_id ?? null,
+    body.categoryId ?? body.category_id ?? null,
+    body.amount !== undefined && body.amount !== null ? Number(body.amount) : null,
+    body.currency ?? null,
+    body.startDate ?? body.start_date ?? null,
+    body.note ?? null,
+    body.place ?? null,
+    body.hashtags ? (typeof body.hashtags === 'string' ? body.hashtags : JSON.stringify(body.hashtags)) : null,
+    body.imageUrl ?? body.image_url ?? null,
     now,
     id,
     user.id
