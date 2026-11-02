@@ -385,7 +385,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   inputMode="decimal"
                   autoComplete="off"
                   placeholder="0.00"
-                  autoFocus
                   value={amount}
                   onChange={(e) => {
                     setAmount(sanitizeAmount(e.target.value));
