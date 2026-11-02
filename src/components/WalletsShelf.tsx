@@ -120,17 +120,6 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
             </div>
           );
         })}
-
-        {/* Add New Wallet Quick Button */}
-        <div
-          onClick={() => setIsAddWalletOpen(true)}
-          className="cursor-pointer rounded-2xl p-4 border border-dashed border-border/80 dark:border-white/15 hover:border-emerald-500/60 bg-secondary/30 hover:bg-secondary/60 dark:bg-slate-900/30 dark:hover:bg-slate-900/60 flex flex-col items-center justify-center text-center transition-all min-h-[105px] group"
-        >
-          <div className="w-8 h-8 rounded-full bg-secondary dark:bg-slate-800 border border-border/60 dark:border-white/10 shadow-sm flex items-center justify-center text-muted-foreground group-hover:text-emerald-400 group-hover:border-emerald-500/40 transition-colors mb-1.5">
-            <Plus size={16} />
-          </div>
-          <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">Connect / Add Wallet</span>
-        </div>
       </div>
     </div>
   );
