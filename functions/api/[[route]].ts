@@ -615,12 +615,12 @@ app.get('/transactions', async (c) => {
     params.push(categoryId);
   }
   if (startDate) {
-    query += ` AND t.start_date >= ?`;
-    params.push(startDate);
+    query += ' AND substr(t.start_date, 1, 10) >= ?';
+    params.push(startDate.slice(0, 10));
   }
   if (endDate) {
-    query += ` AND t.start_date <= ?`;
-    params.push(endDate);
+    query += ' AND substr(t.start_date, 1, 10) <= ?';
+    params.push(endDate.slice(0, 10));
   }
   if (search) {
     query += ` AND (t.note LIKE ? OR t.hashtags LIKE ? OR t.place LIKE ?)`;
@@ -967,12 +967,12 @@ app.get('/stats/dashboard', async (c) => {
     params.push(walletId);
   }
   if (startDate) {
-    txQuery += ` AND t.start_date >= ?`;
-    params.push(startDate);
+    txQuery += ' AND substr(t.start_date, 1, 10) >= ?';
+    params.push(startDate.slice(0, 10));
   }
   if (endDate) {
-    txQuery += ` AND t.start_date <= ?`;
-    params.push(endDate);
+    txQuery += ' AND substr(t.start_date, 1, 10) <= ?';
+    params.push(endDate.slice(0, 10));
   }
   txQuery += ` ORDER BY t.start_date ASC`;
 

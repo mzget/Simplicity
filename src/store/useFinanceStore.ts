@@ -72,7 +72,7 @@ const getDatesForPreset = (preset: PeriodPreset): { start: string; end: string }
   }
   if (preset === 'all_time') {
     return {
-      start: '2020-01-01',
+      start: '1970-01-01',
       end: format(now, 'yyyy-MM-dd'),
     };
   }

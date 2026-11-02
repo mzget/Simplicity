@@ -606,10 +606,12 @@ export const api = {
           txs = txs.filter((t) => t.category_id === filters.categoryId);
         }
         if (filters?.startDate) {
-          txs = txs.filter((t) => t.start_date >= filters.startDate!);
+          const start = filters.startDate.slice(0, 10);
+          txs = txs.filter((t) => t.start_date.slice(0, 10) >= start);
         }
         if (filters?.endDate) {
-          txs = txs.filter((t) => t.start_date <= filters.endDate!);
+          const end = filters.endDate.slice(0, 10);
+          txs = txs.filter((t) => t.start_date.slice(0, 10) <= end);
         }
         if (filters?.search) {
           const q = filters.search.toLowerCase();
