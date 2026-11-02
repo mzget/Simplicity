@@ -5,6 +5,7 @@ import { Button } from '../../src/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../src/components/ui/card';
 import { Badge } from '../../src/components/ui/badge';
 import { Input } from '../../src/components/ui/input';
+import { Search, Check } from 'lucide-react';
 
 describe('shadcn UI Primitives', () => {
   it('renders Button with variants and sizes correctly', () => {
@@ -47,5 +48,28 @@ describe('shadcn UI Primitives', () => {
     render(<Input placeholder="Search test" readOnly />);
     expect(screen.getByPlaceholderText('Search test')).toBeInTheDocument();
   });
-});
 
+  it('renders Input with startIcon and applies left padding to prevent text overlap', () => {
+    render(
+      <Input
+        placeholder="Search with icon"
+        startIcon={<Search data-testid="search-icon" size={14} />}
+      />
+    );
+    const input = screen.getByPlaceholderText('Search with icon');
+    expect(screen.getByTestId('search-icon')).toBeInTheDocument();
+    expect(input.className).toContain('!pl-9');
+  });
+
+  it('renders Input with endIcon and applies right padding', () => {
+    render(
+      <Input
+        placeholder="Valid input"
+        endIcon={<Check data-testid="check-icon" size={14} />}
+      />
+    );
+    const input = screen.getByPlaceholderText('Valid input');
+    expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+    expect(input.className).toContain('!pr-9');
+  });
+});

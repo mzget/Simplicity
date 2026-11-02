@@ -97,11 +97,11 @@
 }
 
 /* Button & input resets inside simplicity-scope */
-.simplicity-scope button,
-.simplicity-scope input,
-.simplicity-scope optgroup,
-.simplicity-scope select,
-.simplicity-scope textarea {
+:where(.simplicity-scope) button,
+:where(.simplicity-scope) input,
+:where(.simplicity-scope) optgroup,
+:where(.simplicity-scope) select,
+:where(.simplicity-scope) textarea {
   font-family: inherit;
   font-size: 100%;
   font-weight: inherit;

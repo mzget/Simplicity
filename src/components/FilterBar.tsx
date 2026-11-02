@@ -44,29 +44,35 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
         </div>
 
         {/* Category Filter Dropdown */}
-        <select id="finance-category-filter" name="categoryId"
+        <select
+          id="finance-category-filter"
+          name="categoryId"
           value={selectedCategoryId}
           onChange={(e) => setSelectedCategoryId(e.target.value)}
           className="text-xs font-medium h-9 px-3 bg-secondary/60 rounded-xl border border-border/80 text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
         >
           <option value="all">All Categories</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
         </select>
       </div>
 
       <div className="flex items-center gap-2 w-full sm:w-auto">
         {/* Search note & hashtag */}
-        <div className="relative flex-1 sm:w-64">
-          <Input id="finance-search-input" name="searchQuery"
+        <div className="flex-1 sm:w-64">
+          <Input
+            id="finance-search-input"
+            name="searchQuery"
             type="text"
             placeholder="Search note or #tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 text-xs h-9 bg-secondary/50 border-border/80"
+            startIcon={<Search size={14} />}
+            className="text-xs h-9 bg-secondary/50 border-border/80"
           />
-          <Search size={14} className="absolute left-2.5 top-2.5 text-muted-foreground pointer-events-none" />
         </div>
 
         {/* Reset Filter Button */}
