@@ -315,7 +315,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
       )}
     >
       {/* Main Content Area — No Navbar rendered in Federated mode */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-0 sm:px-6 lg:px-8 py-3 sm:py-6 space-y-3.5 sm:space-y-6">
         {/* PWA Offline / Syncing / DLQ Status Banner */}
         <PwaStatusBanner onSyncComplete={refreshData} />
 

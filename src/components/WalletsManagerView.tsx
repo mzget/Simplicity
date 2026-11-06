@@ -44,13 +44,13 @@ export const WalletsManagerView: React.FC<WalletsManagerViewProps> = ({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {wallets.map((w) => {
           const balance = w.computed_balance || 0;
           return (
             <div
               key={w.id}
-              className="bg-white rounded-3xl p-5 border border-simplicity-border shadow-simplicity relative overflow-hidden flex flex-col justify-between"
+              className="bg-white rounded-xl sm:rounded-3xl p-3.5 sm:p-5 border border-simplicity-border shadow-simplicity relative overflow-hidden flex flex-col justify-between"
             >
               <div 
                 className="absolute top-0 left-0 right-0 h-1.5"

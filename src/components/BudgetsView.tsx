@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Budget, Category } from '../types';
 import { Plus, PiggyBank, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -58,22 +58,22 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-simplicity-border shadow-simplicity">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-simplicity-border shadow-simplicity">
           <span className="text-xs font-bold uppercase tracking-wider text-simplicity-muted">Total Budgeted</span>
           <div className="text-2xl font-bold font-mono text-simplicity-text mt-1">
             {totalBudgeted.toLocaleString()} {currency}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-simplicity-border shadow-simplicity">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-simplicity-border shadow-simplicity">
           <span className="text-xs font-bold uppercase tracking-wider text-simplicity-muted">Total Spent This Month</span>
           <div className="text-2xl font-bold font-mono text-simplicity-red mt-1">
             {totalSpent.toLocaleString()} {currency}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-simplicity-border shadow-simplicity">
+        <div className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-simplicity-border shadow-simplicity">
           <span className="text-xs font-bold uppercase tracking-wider text-simplicity-muted">Remaining Safe to Spend</span>
           <div className="text-2xl font-bold font-mono text-simplicity-teal mt-1">
             {Math.max(0, totalBudgeted - totalSpent).toLocaleString()} {currency}
@@ -169,7 +169,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
       )}
 
       {/* Budgets List Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         {budgets.map((b) => {
           const spent = b.currentSpent || 0;
           const limit = b.amount || 1;
@@ -180,7 +180,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
           const barColor = isOver ? '#F55353' : isWarning ? '#FFAA2C' : '#12C48B';
 
           return (
-            <div key={b.id} className="bg-white rounded-2xl p-5 border border-simplicity-border/80 shadow-simplicity flex flex-col justify-between">
+            <div key={b.id} className="bg-white rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-simplicity-border/80 shadow-simplicity flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">

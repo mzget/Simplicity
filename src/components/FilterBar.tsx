@@ -36,7 +36,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({ categories }) => {
   };
 
   return (
-    <Card className="p-2 sm:p-2.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <Card className="p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3">
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground px-1">
           <Filter size={13} className="text-emerald-500 dark:text-emerald-400" />

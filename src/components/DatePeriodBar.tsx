@@ -50,7 +50,7 @@ export const DatePeriodBar: React.FC = () => {
   };
 
   return (
-    <Card className="p-2 sm:p-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
+    <Card className="p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl flex flex-col md:flex-row items-center justify-between gap-2 sm:gap-3">
       {/* Date Stepper */}
       <div className="flex items-center gap-1.5 w-full md:w-auto justify-between md:justify-start">
         <Button

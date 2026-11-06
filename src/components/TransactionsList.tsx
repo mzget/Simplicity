@@ -52,7 +52,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
 
   if (transactions.length === 0) {
     return (
-      <div className="bg-card/90 dark:bg-slate-900/60 rounded-2xl p-10 border border-border/80 dark:border-white/10 text-center shadow-simplicity simplicity-glass-card backdrop-blur-xl">
+      <div className="bg-card/90 dark:bg-slate-900/60 rounded-xl sm:rounded-2xl p-6 sm:p-10 border border-border/80 dark:border-white/10 text-center shadow-simplicity simplicity-glass-card backdrop-blur-xl">
         <div className="w-12 h-12 rounded-2xl bg-secondary/50 dark:bg-slate-800/60 border border-border/60 dark:border-white/10 mx-auto flex items-center justify-center text-muted-foreground mb-3 shadow-inner">
           <ArrowRightLeft size={22} />
         </div>
@@ -71,9 +71,9 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
         const isSumPositive = dailySum >= 0;
 
         return (
-          <div key={dateKey} className="bg-card/90 dark:bg-slate-900/60 rounded-2xl border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl overflow-hidden">
+          <div key={dateKey} className="bg-card/90 dark:bg-slate-900/60 rounded-xl sm:rounded-2xl border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl overflow-hidden">
             {/* Group Header */}
-            <div className="px-5 py-3 bg-secondary/40 dark:bg-slate-800/40 border-b border-border/60 dark:border-white/10 flex items-center justify-between">
+            <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-secondary/40 dark:bg-slate-800/40 border-b border-border/60 dark:border-white/10 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-simplicity-muted">
                 {formatDateHeader(dateKey)}
               </span>
@@ -97,11 +97,11 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                 return (
                   <div
                     key={tx.id}
-                    className="px-5 py-3.5 flex items-center justify-between hover:bg-simplicity-canvas/50 transition-colors group cursor-pointer"
+                    className="px-3 sm:px-5 py-2.5 sm:py-3.5 flex items-center justify-between hover:bg-simplicity-canvas/50 transition-colors group cursor-pointer"
                     onClick={() => setEditingTx(tx)}
                   >
                     {/* Left: Category Icon & Details */}
-                    <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
                       <CategoryIcon
                         name={isTransfer ? 'ArrowRightLeft' : tx.category_icon || 'Tag'}
                         color={isTransfer ? '#38A3F1' : tx.category_color || '#6B7F8E'}
