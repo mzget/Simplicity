@@ -32,7 +32,7 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2.5 sm:mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-simplicity-muted dark:text-slate-400">
           Your Wallets & Accounts
         </h2>
@@ -44,11 +44,11 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
         {/* All Wallets Summary Card */}
         <div
           onClick={() => setSelectedWalletId('all')}
-          className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-card/90 dark:bg-slate-900/60 simplicity-glass-card backdrop-blur-xl ${
+          className={`cursor-pointer rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-200 border bg-card/90 dark:bg-slate-900/60 simplicity-glass-card backdrop-blur-xl ${
             selectedWalletId === 'all'
               ? 'ring-2 ring-emerald-500 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-gradient-to-br from-emerald-950/20 via-transparent to-transparent'
               : 'border-border/80 dark:border-white/10 hover:border-emerald-500/40 hover:shadow-md'
@@ -82,7 +82,7 @@ export const WalletsShelf: React.FC<WalletsShelfProps> = ({ wallets }) => {
             <div
               key={wallet.id}
               onClick={() => setSelectedWalletId(wallet.id)}
-              className={`cursor-pointer rounded-2xl p-4 transition-all duration-200 border bg-white simplicity-glass-card relative overflow-hidden ${
+              className={`cursor-pointer rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-200 border bg-white simplicity-glass-card relative overflow-hidden ${
                 isSelected
                   ? 'ring-2 ring-emerald-500 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-gradient-to-br from-emerald-950/20 via-transparent to-transparent'
                   : 'border-border/80 dark:border-white/10 hover:border-emerald-500/40 hover:shadow-md'

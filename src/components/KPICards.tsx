@@ -20,10 +20,10 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
       {/* 1. Total Balance */}
-      <Card className="relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
-        <CardContent className="p-4 sm:p-5">
+      <Card className="rounded-xl sm:rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
+        <CardContent className="p-3 sm:p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               Total Balance
@@ -43,8 +43,8 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
       </Card>
 
       {/* 2. Total Period Change */}
-      <Card className="relative overflow-hidden group hover:border-border transition-all duration-300">
-        <CardContent className="p-4 sm:p-5">
+      <Card className="rounded-xl sm:rounded-2xl relative overflow-hidden group hover:border-border transition-all duration-300">
+        <CardContent className="p-3 sm:p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               Period Change
@@ -70,8 +70,8 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
       </Card>
 
       {/* 3. Total Expenses */}
-      <Card className="relative overflow-hidden group hover:border-red-500/30 transition-all duration-300">
-        <CardContent className="p-4 sm:p-5">
+      <Card className="rounded-xl sm:rounded-2xl relative overflow-hidden group hover:border-red-500/30 transition-all duration-300">
+        <CardContent className="p-3 sm:p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               Period Expenses
@@ -91,8 +91,8 @@ export const KPICards: React.FC<KPICardsProps> = ({ stats, currency = 'THB' }) =
       </Card>
 
       {/* 4. Total Income */}
-      <Card className="relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
-        <CardContent className="p-4 sm:p-5">
+      <Card className="rounded-xl sm:rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
+        <CardContent className="p-3 sm:p-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               Period Income

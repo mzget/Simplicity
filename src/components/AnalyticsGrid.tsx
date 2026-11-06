@@ -29,9 +29,9 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
   }));
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-5">
       {/* 1. Cash Flow History Bar Chart (7 Cols) */}
-      <div className="lg:col-span-7 bg-card/90 dark:bg-slate-900/60 rounded-2xl p-5 border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl">
+      <div className="lg:col-span-7 bg-card/90 dark:bg-slate-900/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-simplicity-teal/10 flex items-center justify-center text-simplicity-teal">
@@ -107,7 +107,7 @@ export const AnalyticsGrid: React.FC<AnalyticsGridProps> = ({ stats, currency = 
       </div>
 
       {/* 2. Expense Category Breakdown Donut & Ranked List (5 Cols) */}
-      <div className="lg:col-span-5 bg-card/90 dark:bg-slate-900/60 rounded-2xl p-5 border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl flex flex-col">
+      <div className="lg:col-span-5 bg-card/90 dark:bg-slate-900/60 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 border border-border/80 dark:border-white/10 shadow-simplicity simplicity-glass-card backdrop-blur-xl flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-simplicity-red/10 flex items-center justify-center text-simplicity-red">
