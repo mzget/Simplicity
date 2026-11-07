@@ -5,6 +5,7 @@ import {
   TrendingDown,
   TrendingUp,
   ArrowRightLeft,
+  Trash2,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
@@ -22,6 +23,7 @@ export interface AddTransactionModalProps {
   categories: Category[];
   onSave: (data: any) => Promise<void>;
   onTransfer: (data: any) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
   isEmbedded?: boolean;
 }
 
@@ -30,6 +32,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   categories,
   onSave,
   onTransfer,
+  onDelete,
   isEmbedded,
 }) => {
   const isMobile = useIsMobile();
@@ -38,6 +41,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     categories,
     onSave,
     onTransfer,
+    onDelete,
   });
 
   const {
@@ -52,6 +56,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setErrors,
     openAiScan,
     handleSubmit,
+    handleDelete,
+    isConfirmingDelete,
+    isDeleting,
     t,
   } = form;
 
@@ -133,6 +140,25 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               );
             })}
           </div>
+          {editingTx && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-testid="desktop-header-delete-btn"
+              onClick={handleDelete}
+              disabled={isDeleting || form.isSubmitting}
+              className={`h-9 w-9 shrink-0 transition-colors ${
+                isConfirmingDelete
+                  ? 'bg-rose-500 text-white hover:bg-rose-600'
+                  : 'text-rose-500 hover:text-rose-400 hover:bg-rose-500/10'
+              }`}
+              title={isConfirmingDelete ? 'Click again to confirm delete' : 'Delete transaction'}
+              aria-label={isConfirmingDelete ? 'Confirm Delete' : 'Delete in Header'}
+            >
+              <Trash2 size={16} />
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"

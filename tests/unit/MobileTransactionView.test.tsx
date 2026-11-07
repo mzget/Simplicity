@@ -39,15 +39,18 @@ const categories = [...expenseCats, cat('i1', 'Salary', 'income')];
 function TestWrapper({
   onSave,
   onTransfer,
+  onDelete,
 }: {
   onSave: (data: any) => Promise<void>;
   onTransfer: (data: any) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }) {
   const form = useTransactionForm({
     wallets,
     categories,
     onSave,
     onTransfer,
+    onDelete,
   });
 
   return <MobileTransactionView form={form} wallets={wallets} categories={categories} />;
@@ -137,6 +140,79 @@ describe('MobileTransactionView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scan Receipt with AI' }));
     expect(useFinanceStore.getState().isAddTxOpen).toBe(false);
     expect(useFinanceStore.getState().isAiScanOpen).toBe(true);
+  });
+
+  it('prevents duplicate submissions on rapid multiple clicks', async () => {
+    let resolveSave: () => void = () => {};
+    const onSave = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve;
+        })
+    );
+    const onTransfer = vi.fn().mockResolvedValue(undefined);
+
+    render(<TestWrapper onSave={onSave} onTransfer={onTransfer} />);
+
+    fireEvent.change(screen.getByLabelText(/Amount \(THB\)/i), { target: { value: '300' } });
+    const saveBtn = screen.getByRole('button', { name: 'Save Transaction' });
+
+    // Click twice rapidly before the first call finishes
+    fireEvent.click(saveBtn);
+    fireEvent.click(saveBtn);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    // Resolve the first call
+    resolveSave();
+    await waitFor(() => {
+      expect(useFinanceStore.getState().isAddTxOpen).toBe(false);
+    });
+  });
+
+  it('supports inline two-step deletion in edit mode', async () => {
+    const tx = {
+      id: 'tx-to-delete',
+      wallet_id: 'w1',
+      category_id: 'e0',
+      type: 'REGULAR',
+      amount: -200,
+      currency: 'THB',
+      start_date: '2026-11-06T10:00:00',
+      note: 'Donation',
+      hashtags: [],
+    } as any;
+
+    useFinanceStore.setState({
+      isAddTxOpen: true,
+      editingTx: tx,
+    });
+
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onTransfer = vi.fn().mockResolvedValue(undefined);
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+
+    render(<TestWrapper onSave={onSave} onTransfer={onTransfer} onDelete={onDelete} />);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Edit Transaction' })).toBeInTheDocument();
+
+    // Step 1: Click Delete button in sticky bottom bar
+    const deleteBtn = screen.getByTestId('delete-tx-btn');
+    fireEvent.click(deleteBtn);
+
+    // Should now show confirmation prompt
+    expect(await screen.findByTestId('confirm-delete-tx-btn')).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    // Step 2: Confirm Delete
+    const confirmBtn = screen.getByTestId('confirm-delete-tx-btn');
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(onDelete).toHaveBeenCalledWith('tx-to-delete');
+      expect(useFinanceStore.getState().isAddTxOpen).toBe(false);
+      expect(useFinanceStore.getState().editingTx).toBeNull();
+    });
   });
 });
 

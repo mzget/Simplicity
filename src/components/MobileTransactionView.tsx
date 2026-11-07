@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Wallet, Category } from '../types';
-import { ArrowLeft, Sparkles, TrendingDown, TrendingUp, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles, TrendingDown, TrendingUp, ArrowRightLeft, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTransactionForm, TxMode, MODE_STYLES } from '../hooks/useTransactionForm';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -29,6 +29,9 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
     closeForm,
     openAiScan,
     handleSubmit,
+    handleDelete,
+    isConfirmingDelete,
+    isDeleting,
     isSubmitting,
     styles,
     t,
@@ -100,17 +103,39 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
           </h1>
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={openAiScan}
-          className="h-10 w-10 shrink-0 rounded-full text-purple-500 hover:text-purple-400 hover:bg-purple-500/10"
-          title="Scan Receipt with AI"
-          aria-label="Scan Receipt with AI"
-        >
-          <Sparkles size={20} />
-        </Button>
+        <div className="flex items-center gap-1">
+          {editingTx && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-testid="mobile-header-delete-btn"
+              onClick={handleDelete}
+              disabled={isDeleting || isSubmitting}
+              className={`h-10 w-10 shrink-0 rounded-full transition-colors ${
+                isConfirmingDelete
+                  ? 'bg-rose-500 text-white hover:bg-rose-600'
+                  : 'text-rose-500 hover:text-rose-400 hover:bg-rose-500/10'
+              }`}
+              title={isConfirmingDelete ? 'Click again to confirm delete' : 'Delete transaction'}
+              aria-label={isConfirmingDelete ? 'Confirm Delete' : 'Delete in Header'}
+            >
+              <Trash2 size={20} />
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={openAiScan}
+            className="h-10 w-10 shrink-0 rounded-full text-purple-500 hover:text-purple-400 hover:bg-purple-500/10"
+            title="Scan Receipt with AI"
+            aria-label="Scan Receipt with AI"
+          >
+            <Sparkles size={20} />
+          </Button>
+        </div>
       </header>
 
       {/* 2. Mode Segmented Switcher (Sticky below header) */}
@@ -169,15 +194,42 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
 
         {/* 4. Fixed Sticky Bottom Action Bar */}
         <div
-          className={`shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,16px))] border-t shadow-lg ${t.bar}`}
+          className={`shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,16px))] border-t shadow-2xl ${t.bar}`}
         >
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full h-12 rounded-2xl font-bold text-base shadow-xl transition-all ${styles.button}`}
-          >
-            {isSubmitting ? 'Saving...' : editingTx ? 'Update Transaction' : 'Save Transaction'}
-          </Button>
+          {editingTx ? (
+            <div className="flex items-center gap-2.5">
+              <Button
+                type="button"
+                data-testid={isConfirmingDelete ? 'confirm-delete-tx-btn' : 'delete-tx-btn'}
+                variant={isConfirmingDelete ? 'destructive' : 'outline'}
+                onClick={handleDelete}
+                disabled={isDeleting || isSubmitting}
+                className={`h-12 px-4 rounded-xl font-bold text-sm transition-all flex items-center gap-1.5 ${
+                  isConfirmingDelete
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                    : 'border-rose-500/30 text-rose-500 hover:bg-rose-500/10 hover:text-rose-400'
+                }`}
+              >
+                <Trash2 size={18} />
+                <span>{isDeleting ? 'Deleting...' : isConfirmingDelete ? 'Confirm?' : 'Delete'}</span>
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || isDeleting}
+                className={`flex-1 h-12 rounded-xl font-bold text-base shadow-xl transition-all active:scale-[0.98] ${styles.button}`}
+              >
+                {isSubmitting ? 'Saving...' : 'Update Transaction'}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full h-12 rounded-xl font-bold text-base shadow-xl transition-all active:scale-[0.98] ${styles.button}`}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Transaction'}
+            </Button>
+          )}
         </div>
       </form>
     </div>

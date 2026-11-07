@@ -35,13 +35,20 @@ const wallets = [wallet('w1', 'Main Wallet', 5000), wallet('w2', 'Savings', 100)
 const expenseCats = Array.from({ length: 10 }, (_, i) => cat(`e${i}`, `Expense ${i}`, 'expense', i));
 const categories = [...expenseCats, cat('i1', 'Salary', 'income')];
 
-const renderModal = () => {
+const renderModal = (props?: { onDelete?: (id: string) => Promise<void> }) => {
   const onSave = vi.fn().mockResolvedValue(undefined);
   const onTransfer = vi.fn().mockResolvedValue(undefined);
+  const onDelete = props?.onDelete || vi.fn().mockResolvedValue(undefined);
   render(
-    <AddTransactionModal wallets={wallets} categories={categories} onSave={onSave} onTransfer={onTransfer} />
+    <AddTransactionModal
+      wallets={wallets}
+      categories={categories}
+      onSave={onSave}
+      onTransfer={onTransfer}
+      onDelete={onDelete}
+    />
   );
-  return { onSave, onTransfer };
+  return { onSave, onTransfer, onDelete };
 };
 
 const typeAmount = (value: string) =>
@@ -319,5 +326,69 @@ describe('AddTransactionModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scan Receipt with AI' }));
     expect(useFinanceStore.getState().isAddTxOpen).toBe(false);
     expect(useFinanceStore.getState().isAiScanOpen).toBe(true);
+  });
+
+  it('supports inline two-step deletion on desktop in edit mode', async () => {
+    const tx = {
+      id: 'tx-desktop-del',
+      wallet_id: 'w1',
+      category_id: 'e1',
+      type: 'REGULAR',
+      amount: -120,
+      currency: 'THB',
+      start_date: '2026-11-06T10:00:00',
+      note: 'Coffee',
+      hashtags: [],
+    } as any;
+
+    useFinanceStore.setState({
+      isAddTxOpen: true,
+      editingTx: tx,
+    });
+
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    renderModal({ onDelete });
+
+    expect(screen.getByRole('button', { name: 'Update Transaction' })).toBeInTheDocument();
+
+    // Step 1: Click Delete button
+    const deleteBtn = screen.getByTestId('delete-tx-btn');
+    fireEvent.click(deleteBtn);
+
+    // Shows confirmation state
+    expect(await screen.findByTestId('confirm-delete-tx-btn')).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    // Step 2: Confirm Delete
+    const confirmBtn = screen.getByTestId('confirm-delete-tx-btn');
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(onDelete).toHaveBeenCalledWith('tx-desktop-del');
+      expect(useFinanceStore.getState().isAddTxOpen).toBe(false);
+      expect(useFinanceStore.getState().editingTx).toBeNull();
+    });
+  });
+
+  it('resets form fields on successful save so reopened form starts fresh', async () => {
+    const { onSave } = renderModal();
+    typeAmount('500');
+    fireEvent.change(screen.getByLabelText('Note / Description'), { target: { value: 'Donation' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Transaction' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalled();
+      expect(useFinanceStore.getState().isAddTxOpen).toBe(false);
+    });
+
+    // Reopen modal for new transaction
+    useFinanceStore.setState({ isAddTxOpen: true });
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Amount \(THB\)/i)).toHaveValue('');
+      expect(screen.getByLabelText('Note / Description')).toHaveValue('');
+    });
   });
 });

@@ -10,61 +10,64 @@ export const COLLAPSED_CATEGORY_COUNT = 8;
 
 export const MODE_STYLES: Record<
   TxMode,
-  { sign: string; signColor: string; tabActive: string; button: string; focus: string }
+  { sign: string; signColor: string; tabActive: string; button: string; focus: string; ring: string }
 > = {
   expense: {
     sign: '-',
     signColor: 'text-rose-500',
     tabActive: '!bg-rose-500 !text-white shadow-md shadow-rose-500/25 font-bold',
-    button: 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20',
+    button: '!bg-rose-500 hover:!bg-rose-600 !text-white shadow-lg shadow-rose-500/25',
     focus: 'focus:border-rose-500',
+    ring: 'ring-rose-500',
   },
   income: {
     sign: '+',
     signColor: 'text-emerald-500',
     tabActive: '!bg-emerald-500 !text-white shadow-md shadow-emerald-500/25 font-bold',
-    button: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20',
+    button: '!bg-emerald-500 hover:!bg-emerald-600 !text-white shadow-lg shadow-emerald-500/25',
     focus: 'focus:border-emerald-500',
+    ring: 'ring-emerald-500',
   },
   transfer: {
     sign: '⇄',
     signColor: 'text-sky-500',
     tabActive: '!bg-sky-500 !text-white shadow-md shadow-sky-500/25 font-bold',
-    button: 'bg-sky-500 hover:bg-sky-600 text-white shadow-sky-500/20',
+    button: '!bg-sky-500 hover:!bg-sky-600 !text-white shadow-lg shadow-sky-500/25',
     focus: 'focus:border-sky-500',
+    ring: 'ring-sky-500',
   },
 };
 
 export const THEME_STYLES = {
   dark: {
-    surface: 'border-white/10 bg-[#0f172a]/95 text-slate-100',
-    bar: 'bg-slate-900/60 border-white/10',
-    segment: 'bg-slate-950/60 border-white/5',
-    segmentIdle: 'text-slate-400 hover:text-slate-200',
-    label: 'text-slate-400',
-    field: 'bg-slate-900/80 border-white/10 text-slate-100',
-    well: 'bg-slate-950/40 border-white/10',
-    amountText: 'text-slate-100 border-white/10 placeholder:text-slate-600',
-    tileIdle: 'text-slate-300 hover:bg-white/5',
-    tileSelected: 'bg-slate-800 shadow-sm ring-2 ring-emerald-500',
-    tileLabel: 'text-slate-300',
-    subtle: 'text-slate-500',
-    chip: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-    check: 'border-white/20 bg-slate-900',
+    surface: 'border-slate-800 bg-[#0b0f17] text-slate-100',
+    bar: 'bg-[#0f172a] border-slate-800',
+    segment: 'bg-slate-900 border-slate-800',
+    segmentIdle: 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60',
+    label: 'text-slate-300 font-semibold',
+    field: 'bg-slate-900 border-slate-700/80 text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500',
+    well: 'bg-slate-900/60 border-slate-800',
+    amountText: 'text-slate-100 border-slate-700 placeholder:text-slate-600',
+    tileIdle: 'text-slate-300 hover:bg-slate-800/80 border border-transparent',
+    tileSelected: 'bg-slate-800/90 shadow-md ring-2 border border-slate-700/80',
+    tileLabel: 'text-slate-200',
+    subtle: 'text-slate-400',
+    chip: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    check: 'border-slate-700 bg-slate-900',
   },
   light: {
     surface: 'border-slate-200 bg-white text-slate-900',
     bar: 'bg-slate-50 border-slate-200',
     segment: 'bg-slate-100 border-slate-200',
-    segmentIdle: 'text-slate-500 hover:text-slate-800',
-    label: 'text-slate-500',
-    field: 'bg-slate-50 border-slate-200 text-slate-900',
+    segmentIdle: 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60',
+    label: 'text-slate-700 font-semibold',
+    field: 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500',
     well: 'bg-slate-50 border-slate-200',
-    amountText: 'text-slate-900 border-slate-200 placeholder:text-slate-300',
-    tileIdle: 'text-slate-600 hover:bg-slate-100',
-    tileSelected: 'bg-white shadow-sm ring-2 ring-emerald-500',
-    tileLabel: 'text-slate-600',
-    subtle: 'text-slate-400',
+    amountText: 'text-slate-900 border-slate-300 placeholder:text-slate-300',
+    tileIdle: 'text-slate-600 hover:bg-slate-100 border border-transparent',
+    tileSelected: 'bg-white shadow-md ring-2 border border-slate-200',
+    tileLabel: 'text-slate-700',
+    subtle: 'text-slate-500',
     chip: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     check: 'border-slate-300 bg-white',
   },
@@ -82,6 +85,7 @@ export interface UseTransactionFormProps {
   categories: Category[];
   onSave: (data: any) => Promise<void>;
   onTransfer: (data: any) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
   onClose?: () => void;
 }
 
@@ -90,6 +94,7 @@ export function useTransactionForm({
   categories,
   onSave,
   onTransfer,
+  onDelete,
   onClose,
 }: UseTransactionFormProps) {
   const {
@@ -100,6 +105,7 @@ export function useTransactionForm({
     selectedWalletId,
     setIsAiScanOpen,
     theme,
+    deleteTransaction: storeDeleteTransaction,
   } = useFinanceStore();
 
   const [txMode, setTxMode] = useState<TxMode>('expense');
@@ -116,10 +122,31 @@ export function useTransactionForm({
   const [hashtagInput, setHashtagInput] = useState<string>('');
   const [keepOpen, setKeepOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
   const [showAllCategories, setShowAllCategories] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const isSubmittingRef = useRef(false);
+  const deleteConfirmTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastLoadedTxIdRef = useRef<string | null>(null);
+
+  const cancelDelete = useCallback(() => {
+    if (deleteConfirmTimerRef.current) {
+      clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = null;
+    }
+    setIsConfirmingDelete(false);
+  }, []);
+
+  const resetFormFields = useCallback(() => {
+    setAmount('');
+    setNote('');
+    setHashtagInput('');
+    setErrors({});
+    setDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    cancelDelete();
+  }, [cancelDelete]);
 
   // Sync state when editing an existing transaction
   useEffect(() => {
@@ -143,23 +170,68 @@ export function useTransactionForm({
             : editingTx.hashtags || [];
         setHashtagInput(tags.join(' '));
         setErrors({});
+        cancelDelete();
       }
     } else {
-      lastLoadedTxIdRef.current = null;
+      if (lastLoadedTxIdRef.current !== null) {
+        lastLoadedTxIdRef.current = null;
+        resetFormFields();
+      }
       // Set default category for create mode if not set
       const filtered = categories.filter((c) => c.type === (txMode === 'income' ? 'income' : 'expense'));
       if (filtered.length > 0 && !categoryId) {
         setCategoryId(filtered[0].id);
       }
     }
-  }, [editingTx, categories, txMode, categoryId]);
+  }, [editingTx, categories, txMode, categoryId, resetFormFields, cancelDelete]);
+
+  useEffect(() => {
+    return () => {
+      if (deleteConfirmTimerRef.current) {
+        clearTimeout(deleteConfirmTimerRef.current);
+      }
+    };
+  }, []);
 
   const closeForm = useCallback(() => {
     setIsAddTxOpen(false);
     setEditingTx(null);
-    setErrors({});
+    resetFormFields();
     onClose?.();
-  }, [setIsAddTxOpen, setEditingTx, setErrors, onClose]);
+  }, [setIsAddTxOpen, setEditingTx, resetFormFields, onClose]);
+
+  const deleteTxAction = onDelete || storeDeleteTransaction;
+
+  const handleDelete = useCallback(async () => {
+    if (!editingTx?.id || isDeleting) return;
+
+    if (!isConfirmingDelete) {
+      setIsConfirmingDelete(true);
+      if (deleteConfirmTimerRef.current) clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = setTimeout(() => {
+        setIsConfirmingDelete(false);
+      }, 4000);
+      return;
+    }
+
+    // Step 2: Confirmed!
+    if (deleteConfirmTimerRef.current) {
+      clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = null;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteTxAction(editingTx.id);
+      closeForm();
+    } catch (err) {
+      console.error('Failed to delete transaction:', err);
+      setErrors((prev) => ({ ...prev, submit: 'Failed to delete transaction' }));
+    } finally {
+      setIsDeleting(false);
+      setIsConfirmingDelete(false);
+    }
+  }, [editingTx, isDeleting, isConfirmingDelete, deleteTxAction, closeForm]);
 
   const currentCategories = categories.filter(
     (c) => c.type === (txMode === 'income' ? 'income' : 'expense')
@@ -174,6 +246,7 @@ export function useTransactionForm({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmittingRef.current || isSubmitting) return false;
 
     const newErrors: Record<string, string> = {};
     const numAmount = Number(amount);
@@ -224,6 +297,7 @@ export function useTransactionForm({
     }
     setErrors({});
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       if (txMode === 'transfer') {
@@ -257,13 +331,11 @@ export function useTransactionForm({
       if (!keepOpen) {
         closeForm();
       } else {
-        setAmount('');
-        setNote('');
-        setHashtagInput('');
-        setErrors({});
+        resetFormFields();
       }
       return true;
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -292,6 +364,8 @@ export function useTransactionForm({
     keepOpen,
     setKeepOpen,
     isSubmitting,
+    isDeleting,
+    isConfirmingDelete,
     showAllCategories,
     setShowAllCategories,
     errors,
@@ -304,6 +378,9 @@ export function useTransactionForm({
     styles,
     t,
     handleSubmit,
+    handleDelete,
+    cancelDelete,
+    resetFormFields,
     openAiScan: () => {
       closeForm();
       setIsAiScanOpen(true);
