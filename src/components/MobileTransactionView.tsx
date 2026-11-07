@@ -169,12 +169,12 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
 
         {/* 4. Fixed Sticky Bottom Action Bar */}
         <div
-          className={`shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,16px))] border-t shadow-lg ${t.bar}`}
+          className={`shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom,16px))] border-t shadow-2xl ${t.bar}`}
         >
           <Button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full h-12 rounded-2xl font-bold text-base shadow-xl transition-all ${styles.button}`}
+            className={`w-full h-12 rounded-xl font-bold text-base shadow-xl transition-all active:scale-[0.98] ${styles.button}`}
           >
             {isSubmitting ? 'Saving...' : editingTx ? 'Update Transaction' : 'Save Transaction'}
           </Button>

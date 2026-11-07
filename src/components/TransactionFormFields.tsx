@@ -199,12 +199,12 @@ export const TransactionFormFields: React.FC<TransactionFormFieldsProps> = ({
                     if (errors.category) setErrors((prev) => ({ ...prev, category: '' }));
                   }}
                   className={`flex flex-col items-center justify-start gap-1 p-2 sm:p-2.5 rounded-xl transition-all ${
-                    isSelected ? t.tileSelected : t.tileIdle
+                    isSelected ? `${t.tileSelected} ${styles.ring}` : t.tileIdle
                   }`}
                 >
                   <CategoryIcon name={cat.icon} color={cat.color} size={isMobile ? 22 : 18} />
                   <span
-                    className={`text-[11px] font-medium leading-tight text-center w-full line-clamp-2 break-words ${t.tileLabel}`}
+                    className={`text-[10px] sm:text-[11px] font-medium leading-tight text-center w-full line-clamp-2 break-normal hyphens-none ${t.tileLabel}`}
                   >
                     {cat.name}
                   </span>
