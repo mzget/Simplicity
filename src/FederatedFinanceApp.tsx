@@ -339,6 +339,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
         categories={categories}
         onSave={saveTransaction}
         onTransfer={transfer}
+        onDelete={deleteTransaction}
         isEmbedded={isEmbedded}
       />
 

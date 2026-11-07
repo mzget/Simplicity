@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -44,6 +45,9 @@ export const TransactionFormFields: React.FC<TransactionFormFieldsProps> = ({
     keepOpen,
     setKeepOpen,
     isSubmitting,
+    isDeleting,
+    isConfirmingDelete,
+    handleDelete,
     showAllCategories,
     setShowAllCategories,
     errors,
@@ -355,16 +359,43 @@ export const TransactionFormFields: React.FC<TransactionFormFieldsProps> = ({
         </label>
       </div>
 
-      {/* Save Button for Desktop (inside form flow) */}
+      {/* Save & Delete Buttons for Desktop (inside form flow) */}
       {!isMobile && (
         <div className="pt-2">
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full h-11 rounded-2xl font-bold text-sm shadow-lg transition-all ${styles.button}`}
-          >
-            {isSubmitting ? 'Saving...' : editingTx ? 'Update Transaction' : 'Save Transaction'}
-          </Button>
+          {editingTx ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                data-testid={isConfirmingDelete ? 'confirm-delete-tx-btn' : 'delete-tx-btn'}
+                variant={isConfirmingDelete ? 'destructive' : 'outline'}
+                onClick={handleDelete}
+                disabled={isDeleting || isSubmitting}
+                className={`h-11 rounded-2xl font-bold text-sm px-4 transition-all flex items-center gap-1.5 ${
+                  isConfirmingDelete
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                    : 'border-rose-500/30 text-rose-500 hover:bg-rose-500/10 hover:text-rose-400'
+                }`}
+              >
+                <Trash2 size={16} />
+                <span>{isDeleting ? 'Deleting...' : isConfirmingDelete ? 'Confirm Delete?' : 'Delete'}</span>
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || isDeleting}
+                className={`flex-1 h-11 rounded-2xl font-bold text-sm shadow-lg transition-all ${styles.button}`}
+              >
+                {isSubmitting ? 'Saving...' : 'Update Transaction'}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full h-11 rounded-2xl font-bold text-sm shadow-lg transition-all ${styles.button}`}
+            >
+              Save Transaction
+            </Button>
+          )}
         </div>
       )}
     </>

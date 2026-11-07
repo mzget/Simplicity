@@ -85,6 +85,7 @@ export interface UseTransactionFormProps {
   categories: Category[];
   onSave: (data: any) => Promise<void>;
   onTransfer: (data: any) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
   onClose?: () => void;
 }
 
@@ -93,6 +94,7 @@ export function useTransactionForm({
   categories,
   onSave,
   onTransfer,
+  onDelete,
   onClose,
 }: UseTransactionFormProps) {
   const {
@@ -103,6 +105,7 @@ export function useTransactionForm({
     selectedWalletId,
     setIsAiScanOpen,
     theme,
+    deleteTransaction: storeDeleteTransaction,
   } = useFinanceStore();
 
   const [txMode, setTxMode] = useState<TxMode>('expense');
@@ -119,10 +122,31 @@ export function useTransactionForm({
   const [hashtagInput, setHashtagInput] = useState<string>('');
   const [keepOpen, setKeepOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
   const [showAllCategories, setShowAllCategories] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const isSubmittingRef = useRef(false);
+  const deleteConfirmTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastLoadedTxIdRef = useRef<string | null>(null);
+
+  const cancelDelete = useCallback(() => {
+    if (deleteConfirmTimerRef.current) {
+      clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = null;
+    }
+    setIsConfirmingDelete(false);
+  }, []);
+
+  const resetFormFields = useCallback(() => {
+    setAmount('');
+    setNote('');
+    setHashtagInput('');
+    setErrors({});
+    setDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+    cancelDelete();
+  }, [cancelDelete]);
 
   // Sync state when editing an existing transaction
   useEffect(() => {
@@ -146,23 +170,68 @@ export function useTransactionForm({
             : editingTx.hashtags || [];
         setHashtagInput(tags.join(' '));
         setErrors({});
+        cancelDelete();
       }
     } else {
-      lastLoadedTxIdRef.current = null;
+      if (lastLoadedTxIdRef.current !== null) {
+        lastLoadedTxIdRef.current = null;
+        resetFormFields();
+      }
       // Set default category for create mode if not set
       const filtered = categories.filter((c) => c.type === (txMode === 'income' ? 'income' : 'expense'));
       if (filtered.length > 0 && !categoryId) {
         setCategoryId(filtered[0].id);
       }
     }
-  }, [editingTx, categories, txMode, categoryId]);
+  }, [editingTx, categories, txMode, categoryId, resetFormFields, cancelDelete]);
+
+  useEffect(() => {
+    return () => {
+      if (deleteConfirmTimerRef.current) {
+        clearTimeout(deleteConfirmTimerRef.current);
+      }
+    };
+  }, []);
 
   const closeForm = useCallback(() => {
     setIsAddTxOpen(false);
     setEditingTx(null);
-    setErrors({});
+    resetFormFields();
     onClose?.();
-  }, [setIsAddTxOpen, setEditingTx, setErrors, onClose]);
+  }, [setIsAddTxOpen, setEditingTx, resetFormFields, onClose]);
+
+  const deleteTxAction = onDelete || storeDeleteTransaction;
+
+  const handleDelete = useCallback(async () => {
+    if (!editingTx?.id || isDeleting) return;
+
+    if (!isConfirmingDelete) {
+      setIsConfirmingDelete(true);
+      if (deleteConfirmTimerRef.current) clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = setTimeout(() => {
+        setIsConfirmingDelete(false);
+      }, 4000);
+      return;
+    }
+
+    // Step 2: Confirmed!
+    if (deleteConfirmTimerRef.current) {
+      clearTimeout(deleteConfirmTimerRef.current);
+      deleteConfirmTimerRef.current = null;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteTxAction(editingTx.id);
+      closeForm();
+    } catch (err) {
+      console.error('Failed to delete transaction:', err);
+      setErrors((prev) => ({ ...prev, submit: 'Failed to delete transaction' }));
+    } finally {
+      setIsDeleting(false);
+      setIsConfirmingDelete(false);
+    }
+  }, [editingTx, isDeleting, isConfirmingDelete, deleteTxAction, closeForm]);
 
   const currentCategories = categories.filter(
     (c) => c.type === (txMode === 'income' ? 'income' : 'expense')
@@ -177,6 +246,7 @@ export function useTransactionForm({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmittingRef.current || isSubmitting) return false;
 
     const newErrors: Record<string, string> = {};
     const numAmount = Number(amount);
@@ -227,6 +297,7 @@ export function useTransactionForm({
     }
     setErrors({});
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       if (txMode === 'transfer') {
@@ -260,13 +331,11 @@ export function useTransactionForm({
       if (!keepOpen) {
         closeForm();
       } else {
-        setAmount('');
-        setNote('');
-        setHashtagInput('');
-        setErrors({});
+        resetFormFields();
       }
       return true;
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -295,6 +364,8 @@ export function useTransactionForm({
     keepOpen,
     setKeepOpen,
     isSubmitting,
+    isDeleting,
+    isConfirmingDelete,
     showAllCategories,
     setShowAllCategories,
     errors,
@@ -307,6 +378,9 @@ export function useTransactionForm({
     styles,
     t,
     handleSubmit,
+    handleDelete,
+    cancelDelete,
+    resetFormFields,
     openAiScan: () => {
       closeForm();
       setIsAiScanOpen(true);
