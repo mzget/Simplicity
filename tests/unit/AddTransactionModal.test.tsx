@@ -302,11 +302,11 @@ describe('AddTransactionModal', () => {
     expect(cls.split(/\s+/)).not.toContain('dark');
   });
 
-  it('stacks above the host header (overlay z-[9999], content z-[10000])', () => {
+  it('stacks in ADR-0021 remote modal tier (overlay 1399, content 1400)', () => {
     renderModal();
-    expect(screen.getByTestId('add-transaction-modal').className).toContain('z-[10000]');
+    expect(screen.getByTestId('add-transaction-modal').className).toContain('z-[var(--oaktree-z-remote-modal,1400)]');
     const overlay = document.querySelector('[data-state="open"].fixed.inset-0');
-    expect(overlay?.className).toContain('z-[9999]');
+    expect(overlay?.className).toContain('z-[calc(var(--oaktree-z-remote-modal,1400)-1)]');
   });
 
   it('keeps the dark scope in dark theme', () => {

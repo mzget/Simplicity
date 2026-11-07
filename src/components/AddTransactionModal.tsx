@@ -22,6 +22,7 @@ export interface AddTransactionModalProps {
   categories: Category[];
   onSave: (data: any) => Promise<void>;
   onTransfer: (data: any) => Promise<void>;
+  isEmbedded?: boolean;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
@@ -29,6 +30,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   categories,
   onSave,
   onTransfer,
+  isEmbedded,
 }) => {
   const isMobile = useIsMobile();
   const form = useTransactionForm({
@@ -64,6 +66,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         form={form}
         wallets={wallets}
         categories={categories}
+        isEmbedded={isEmbedded}
       />
     );
   }

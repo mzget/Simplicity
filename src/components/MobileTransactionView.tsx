@@ -3,18 +3,21 @@ import { Wallet, Category } from '../types';
 import { ArrowLeft, Sparkles, TrendingDown, TrendingUp, ArrowRightLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTransactionForm, TxMode, MODE_STYLES } from '../hooks/useTransactionForm';
+import { useFinanceStore } from '../store/useFinanceStore';
 import { TransactionFormFields } from './TransactionFormFields';
 
 export interface MobileTransactionViewProps {
   form: ReturnType<typeof useTransactionForm>;
   wallets: Wallet[];
   categories: Category[];
+  isEmbedded?: boolean;
 }
 
 export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
   form,
   wallets,
   categories,
+  isEmbedded,
 }) => {
   const {
     editingTx,
@@ -31,12 +34,15 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
     t,
   } = form;
 
+  const storeIsEmbedded = useFinanceStore((s) => s.isEmbedded);
+  const effectiveIsEmbedded = isEmbedded ?? storeIsEmbedded ?? false;
+
   const didPushStateRef = useRef(false);
 
   // In-App History Integration (Option A):
   // Intercept phone back button and swipe-to-back to smoothly close this view
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || effectiveIsEmbedded) return;
 
     // Push dummy history entry
     window.history.pushState({ simplicityView: 'mobile-tx' }, '');
@@ -55,7 +61,7 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
         window.history.back();
       }
     };
-  }, [closeForm]);
+  }, [closeForm, effectiveIsEmbedded]);
 
   const modes: {
     key: TxMode;
@@ -72,7 +78,7 @@ export const MobileTransactionView: React.FC<MobileTransactionViewProps> = ({
       role="region"
       aria-label="Transaction Editor"
       data-testid="mobile-transaction-view"
-      className={`simplicity-scope fixed inset-0 z-[10000] flex flex-col font-sans overflow-hidden ${t.surface}`}
+      className={`simplicity-scope fixed inset-0 z-[var(--oaktree-z-remote-modal,1400)] flex flex-col font-sans overflow-hidden ${t.surface}`}
     >
       {/* 1. Mobile Top Navigation Bar */}
       <header
