@@ -30,13 +30,30 @@ The agent is explicitly authorized and encouraged to:
 
 ---
 
+## 🏪 State Management & Store Architecture Rules (Zustand-First Convention)
+
+### 1. Excessive `useState` Anti-Pattern (Store-First Refactoring)
+- **ห้ามใช้ `useState` กระจัดกระจายจำนวนมากใน Component หรือ Screen ระดับบน**:
+  - เมื่อตรวจพบว่า Component มีการใช้ `useState` มากเกินไป (เช่น เกิน 3-4 ตัว) โดยเฉพาะ state ที่เกี่ยวกับ Domain Data, Async Mutations, Loading States, หรือ State ที่ต้องส่งต่อข้าม Component/Modal
+  - **ต้อง Refactor ไปใช้ Zustand Store เสมอ**: รวมศูนย์ State และ Async Actions ไว้ใน Zustand Store (`src/store/*` เช่น `useFinanceStore`) โดยจัดเป็น Domain Slices เพื่อรักษา Single Source of Truth, Clean Component Code, และลดภาระ Re-render
+  - Component หลักควรทำหน้าที่เป็น Presentation/Orchestration Layer ที่ดึง State และ Actions จาก Store โดยตรง
+
+---
+
 ## 🧪 Testing & Coverage Rules
 
-### 1. Unit Test Coverage Rule
-- เมื่อมีการปรับปรุง แก้ไข หรือสร้างโค้ดใหม่ ต้องเขียน Unit Test ให้ครอบคลุมการทำงานเสมอ (Must ALWAYS include unit test coverage for new or modified code/logic).
+### 1. Unit Test Coverage Rule (Mandatory for All Code Changes)
+- **ทุกครั้งที่แก้โค้ด, Refactor หรือสร้างโค้ดใหม่ ต้องเขียน Unit Test ให้ครอบคลุมการทำงานเสมอ (Zero-Tolerance Policy)**:
+  - ครอบคลุมทุก Business Logic, State Store Actions, API Client Adapters, Utility Functions, และ Boundary Conditions
+  - ต้องรักษา 100% Pass Rate และ 0 Regressions ทุกครั้งก่อนส่งมอบงานหรือปล่อย Release
 
-### 2. E2E Test Coverage Rule
-- เมื่อมีหน้าจอใหม่ หรือ Module ใด ๆ ถูกแก้ไข หรือสร้างใหม่ ต้องเขียน E2E Test ครอบคลุมการแสดงผลและ User Flows ของหน้าจอนั้น ๆ เสมอ (Must ALWAYS include E2E test coverage whenever screens or modules are added or modified).
+### 2. E2E Test Coverage Rule (Screen-Mandatory Policy)
+- **ทุกหน้าจอ (Every Screen / Module) ต้องมี E2E Test (Playwright) กำกับเสมอ**:
+  - เมื่อมีหน้าจอใหม่, แก้ไขหน้าจอเดิม, หรือเพิ่ม Interactive Flow ใด ๆ ต้องเขียนหรืออัปเดต E2E Test ให้ครอบคลุม:
+    1. การเรนเดอร์และการแสดงผลของข้อมูล (Data Rendering & Initial States)
+    2. User Flows & Critical Journeys (การกดปุ่ม, กรอกฟอร์ม, สลับแท็บ, บันทึกข้อมูล)
+    3. Responsive Viewports (ทั้ง Mobile Viewport เช่น 390x844 และ Desktop Dialogs)
+    4. Cross-Boundary & Federation Contracts (Props bridge, pendingAction, history guard, z-index)
 
 ---
 
@@ -58,4 +75,3 @@ The agent is explicitly authorized and encouraged to:
   - **Date Boundaries & Presets**: เมื่อคำนวณช่วงเวลา (เช่น This Month, Last Month, This Week) ต้องใช้ฟังก์ชันของ `date-fns` เสมอ (`startOfMonth`, `endOfMonth`, `startOfWeek`, `endOfWeek`, `subMonths`, `addMonths`, `startOfDay`, `endOfDay`)
   - **Formatting & Parsing**: ใช้ `format` และ `parseISO` สำหรับแปลงรูปแบบวันที่ ห้ามเขียน custom regex หรือ substring สำหรับวันเวลาเองโดยไม่จำเป็น
   - **Interval & Boundary Comparisons**: สำหรับการตรวจสอบ Transaction หรือข้อมูลที่อยู่ภายในช่วงเวลา ให้ใช้ date boundary primitives หรือ normalize วันที่ให้อยู่ในระดับ Day (`yyyy-MM-dd`) ป้องกันข้อผิดพลาดที่เกิดจาก Time Component/Timezone Offset (เช่น วันสุดท้ายของเดือนถูกตัดทิ้งเพราะมีเวลาต่อท้าย)
-
