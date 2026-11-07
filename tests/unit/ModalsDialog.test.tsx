@@ -46,8 +46,8 @@ describe.each(cases)('$name uses the shared Radix Dialog', ({ title, flag, ui })
     expect(container).toBeEmptyDOMElement(); // not inside the host-embedded tree
     const dialog = screen.getByRole('dialog', { name: title });
     expect(document.body.contains(dialog)).toBe(true);
-    expect(dialog.className).toContain('z-[10000]');
-    expect(document.querySelector('[data-state="open"].fixed.inset-0')?.className).toContain('z-[9999]');
+    expect(dialog.className).toContain('z-[var(--oaktree-z-remote-modal,1400)]');
+    expect(document.querySelector('[data-state="open"].fixed.inset-0')?.className).toContain('z-[calc(var(--oaktree-z-remote-modal,1400)-1)]');
   });
 
   it('keeps the light card look (no dark scope) and the simplicity scope', () => {

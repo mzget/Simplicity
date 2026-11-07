@@ -13,6 +13,7 @@ import type { Wallet, DashboardStats, Transaction } from '../../src/types';
 
 vi.mock('../../src/api/client', () => ({
   api: {
+    setConfig: vi.fn(),
     getWallets: vi.fn().mockResolvedValue([]),
     getCategories: vi.fn().mockResolvedValue([]),
     getTransactions: vi.fn().mockResolvedValue([]),

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { PeriodPreset, Transaction } from '../types';
+import { PeriodPreset, Transaction, Wallet, Category, Budget, DashboardStats } from '../types';
 import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, startOfYear, endOfYear, format } from 'date-fns';
+import { api, getIsLocalMode } from '../api/client';
 
 interface FinanceState {
   // Navigation
@@ -40,6 +41,8 @@ interface FinanceState {
 
   isAiScanOpen: boolean;
   setIsAiScanOpen: (open: boolean) => void;
+  isEmbedded: boolean;
+  setIsEmbedded: (isEmbedded: boolean) => void;
 
   // Theme & Exchange Rate Synchronization (Milestone 4)
   theme: 'light' | 'dark';
@@ -47,6 +50,38 @@ interface FinanceState {
 
   usdThbRate: number;
   setUsdThbRate: (rate: number) => void;
+
+  // Domain Data Entities (Approach 1: Domain Slice)
+  wallets: Wallet[];
+  setWallets: (wallets: Wallet[]) => void;
+
+  categories: Category[];
+  setCategories: (categories: Category[]) => void;
+
+  transactions: Transaction[];
+  setTransactions: (transactions: Transaction[]) => void;
+
+  budgets: Budget[];
+  setBudgets: (budgets: Budget[]) => void;
+
+  stats: DashboardStats | null;
+  setStats: (stats: DashboardStats | null) => void;
+
+  isLoading: boolean;
+  setIsLoading: (isLoading: boolean) => void;
+
+  isLocalMode: boolean;
+  setIsLocalMode: (isLocalMode: boolean) => void;
+
+  // Domain Async Actions
+  refreshData: (onWalletsSync?: (wallets: Wallet[]) => void) => Promise<void>;
+  saveTransaction: (data: any) => Promise<void>;
+  transfer: (data: any) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  createWallet: (data: any) => Promise<void>;
+  deleteWallet: (id: string) => Promise<void>;
+  createBudget: (data: any) => Promise<void>;
+  deleteBudget: (id: string) => Promise<void>;
 }
 
 const getDatesForPreset = (preset: PeriodPreset): { start: string; end: string } => {
@@ -83,7 +118,7 @@ const getDatesForPreset = (preset: PeriodPreset): { start: string; end: string }
   };
 };
 
-export const useFinanceStore = create<FinanceState>((set) => {
+export const useFinanceStore = create<FinanceState>((set, get) => {
   const initialDates = getDatesForPreset('this_month');
 
   return {
@@ -131,6 +166,8 @@ export const useFinanceStore = create<FinanceState>((set) => {
 
     isAiScanOpen: false,
     setIsAiScanOpen: (isAiScanOpen) => set({ isAiScanOpen }),
+    isEmbedded: false,
+    setIsEmbedded: (isEmbedded) => set({ isEmbedded }),
 
     theme: 'dark',
     setTheme: (theme) =>
@@ -143,6 +180,108 @@ export const useFinanceStore = create<FinanceState>((set) => {
       if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0) {
         set({ usdThbRate: rate });
       }
+    },
+
+    // Domain Data Entities
+    wallets: [],
+    setWallets: (wallets) => set({ wallets }),
+
+    categories: [],
+    setCategories: (categories) => set({ categories }),
+
+    transactions: [],
+    setTransactions: (transactions) => set({ transactions }),
+
+    budgets: [],
+    setBudgets: (budgets) => set({ budgets }),
+
+    stats: null,
+    setStats: (stats) => set({ stats }),
+
+    isLoading: true,
+    setIsLoading: (isLoading) => set({ isLoading }),
+
+    isLocalMode:
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'),
+    setIsLocalMode: (isLocalMode) => set({ isLocalMode }),
+
+    // Domain Async Actions
+    refreshData: async (onWalletsSync) => {
+      const { selectedWalletId, selectedCategoryId, startDate, endDate, searchQuery } = get();
+      try {
+        const [wList, cList, txList, bList, sData] = await Promise.all([
+          api.getWallets(),
+          api.getCategories(),
+          api.getTransactions({
+            walletId: selectedWalletId,
+            categoryId: selectedCategoryId,
+            startDate,
+            endDate,
+            search: searchQuery,
+          }),
+          api.getBudgets(),
+          api.getDashboardStats({
+            walletId: selectedWalletId,
+            startDate,
+            endDate,
+          }),
+        ]);
+
+        set({
+          wallets: wList,
+          categories: cList,
+          transactions: txList,
+          budgets: bList,
+          stats: sData,
+          isLocalMode: getIsLocalMode(),
+        });
+
+        onWalletsSync?.(wList);
+      } catch (err) {
+        console.error('Error refreshing finance data:', err);
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    saveTransaction: async (data: any) => {
+      if (data.id) {
+        await api.updateTransaction(data.id, data);
+      } else {
+        await api.createTransaction(data);
+      }
+      await get().refreshData();
+    },
+
+    transfer: async (data: any) => {
+      await api.createTransfer(data);
+      await get().refreshData();
+    },
+
+    deleteTransaction: async (id: string) => {
+      await api.deleteTransaction(id);
+      await get().refreshData();
+    },
+
+    createWallet: async (data: any) => {
+      await api.createWallet(data);
+      await get().refreshData();
+    },
+
+    deleteWallet: async (id: string) => {
+      await api.deleteWallet(id);
+      await get().refreshData();
+    },
+
+    createBudget: async (data: any) => {
+      await api.createBudget(data);
+      await get().refreshData();
+    },
+
+    deleteBudget: async (id: string) => {
+      await api.deleteBudget(id);
+      await get().refreshData();
     },
   };
 });

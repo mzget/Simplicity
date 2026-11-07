@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import './index.css';
 import { useFinanceStore } from './store/useFinanceStore';
 import { useAuthStore } from './store/useAuthStore';
-import { api, simplicityFetch, getIsLocalMode } from './api/client';
-import { Wallet, Category, Transaction, Budget, DashboardStats } from './types';
+import { api } from './api/client';
+import { Wallet } from './types';
 import { WalletsShelf } from './components/WalletsShelf';
 import { DatePeriodBar } from './components/DatePeriodBar';
 import { FilterBar } from './components/FilterBar';
@@ -32,6 +32,10 @@ export interface FederatedFinanceProps {
   onWalletChange?: (walletId: string) => void;
   onWalletsSync?: (wallets: Wallet[]) => void;
   apiBaseUrl?: string;
+  isEmbedded?: boolean;
+  allowLocalFallback?: boolean;
+  pendingAction?: 'add-tx' | 'ai-scan' | 'csv-import' | 'add-wallet' | null;
+  onActionConsumed?: () => void;
 }
 
 export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
@@ -45,6 +49,10 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
   onWalletChange,
   onWalletsSync,
   apiBaseUrl,
+  isEmbedded = false,
+  allowLocalFallback = true,
+  pendingAction,
+  onActionConsumed,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +65,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
     startDate,
     endDate,
     searchQuery,
+    isAddTxOpen,
     setIsAddTxOpen,
     setIsAddWalletOpen,
     setIsImportOpen,
@@ -64,20 +73,26 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
     theme: storeTheme,
     setTheme,
     setUsdThbRate,
+    setIsEmbedded,
+    // Domain Data & Actions from Zustand Store (Approach 1: Domain Slice)
+    wallets,
+    categories,
+    transactions,
+    budgets,
+    stats,
+    isLoading,
+    isLocalMode,
+    refreshData,
+    saveTransaction,
+    transfer,
+    deleteTransaction,
+    createWallet,
+    deleteWallet,
+    createBudget,
+    deleteBudget,
   } = useFinanceStore();
 
   const { isAuthenticated, checkSession, syncExternalAuth } = useAuthStore();
-
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLocalMode, setIsLocalMode] = useState<boolean>(
-    typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  );
 
   // 1. Synchronize Authentication (User & Token) from Host
   useEffect(() => {
@@ -103,16 +118,20 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
     }
   }, [user, token, isLocalMode, isAuthenticated, checkSession, syncExternalAuth]);
 
-  // 2. Synchronize API Base URL if configured
+  // 2. Synchronize API & Dual-Mode Configuration (ADR-0021)
   useEffect(() => {
-    if (apiBaseUrl) {
-      if (typeof (api as any).setConfig === 'function') {
-        (api as any).setConfig({ apiBaseUrl });
-      } else if (typeof (api as any).setBaseUrl === 'function') {
-        (api as any).setBaseUrl(apiBaseUrl);
-      }
+    if (typeof api?.setConfig === 'function') {
+      api.setConfig({
+        apiBaseUrl,
+        allowLocalFallback,
+        isEmbedded,
+      });
     }
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, allowLocalFallback, isEmbedded]);
+
+  useEffect(() => {
+    setIsEmbedded(isEmbedded);
+  }, [isEmbedded, setIsEmbedded]);
 
   // --------------------------------------------------------------------------
   // Ref-based origin tracking to eliminate bidirectional echo loops
@@ -121,16 +140,14 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
   const lastSyncedWalletRef = useRef<string | undefined>(hostSelectedWalletId);
 
   // 3a. Inbound Tab Sync (Host -> Remote)
-  // Only triggers when the host command changes
   useEffect(() => {
     if (hostActiveTab && hostActiveTab !== activeTab) {
       lastSyncedTabRef.current = hostActiveTab;
       setActiveTab(hostActiveTab);
     }
-  }, [hostActiveTab]);
+  }, [hostActiveTab, activeTab, setActiveTab]);
 
   // 3b. Outbound Tab Sync (Remote -> Host)
-  // Only triggers when activeTab changes internally and differs from last synced
   useEffect(() => {
     if (activeTab && activeTab !== lastSyncedTabRef.current) {
       lastSyncedTabRef.current = activeTab;
@@ -144,7 +161,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
       lastSyncedWalletRef.current = hostSelectedWalletId;
       setSelectedWalletId(hostSelectedWalletId);
     }
-  }, [hostSelectedWalletId]);
+  }, [hostSelectedWalletId, selectedWalletId, setSelectedWalletId]);
 
   // 4b. Outbound Wallet Sync (Remote -> Host)
   useEffect(() => {
@@ -167,70 +184,25 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
     }
   }, [usdThbRate, setUsdThbRate]);
 
-  // 6. Custom Event Bridge ('oaktree:finance-action') for Modals
+  // 6. Hard Cutover: Declarative Action Consumer Bridge (ADR-0021)
   useEffect(() => {
-    const handleFinanceAction = (e: Event) => {
-      const customEvent = e as CustomEvent<{ action: 'add-tx' | 'ai-scan' | 'csv-import' | 'add-wallet' }>;
-      const action = customEvent.detail?.action;
-      if (action === 'add-tx') {
-        setIsAddTxOpen(true);
-      } else if (action === 'ai-scan') {
-        setIsAiScanOpen(true);
-      } else if (action === 'csv-import') {
-        setIsImportOpen(true);
-      } else if (action === 'add-wallet') {
-        setIsAddWalletOpen(true);
-      }
-    };
-
-    window.addEventListener('oaktree:finance-action', handleFinanceAction);
-    return () => {
-      window.removeEventListener('oaktree:finance-action', handleFinanceAction);
-    };
-  }, [setIsAddTxOpen, setIsAiScanOpen, setIsImportOpen, setIsAddWalletOpen]);
-
-  // 7. Data Fetching & Sync Wallets with Host
-  const refreshData = useCallback(async () => {
-    try {
-      const [wList, cList, txList, bList, sData] = await Promise.all([
-        api.getWallets(),
-        api.getCategories(),
-        api.getTransactions({
-          walletId: selectedWalletId,
-          categoryId: selectedCategoryId,
-          startDate,
-          endDate,
-          search: searchQuery,
-        }),
-        api.getBudgets(),
-        api.getDashboardStats({
-          walletId: selectedWalletId,
-          startDate,
-          endDate,
-        }),
-      ]);
-
-      setWallets(wList);
-      setCategories(cList);
-      setTransactions(txList);
-      setBudgets(bList);
-      setStats(sData);
-      if (getIsLocalMode()) {
-        setIsLocalMode(true);
-      }
-
-      // Dispatch wallets list up to host
-      onWalletsSync?.(wList);
-    } catch (err) {
-      console.error('Error refreshing finance data:', err);
-    } finally {
-      setIsLoading(false);
+    if (!pendingAction) return;
+    if (pendingAction === 'add-tx') {
+      setIsAddTxOpen(true);
+    } else if (pendingAction === 'ai-scan') {
+      setIsAiScanOpen(true);
+    } else if (pendingAction === 'csv-import') {
+      setIsImportOpen(true);
+    } else if (pendingAction === 'add-wallet') {
+      setIsAddWalletOpen(true);
     }
-  }, [selectedWalletId, selectedCategoryId, startDate, endDate, searchQuery, onWalletsSync]);
+    onActionConsumed?.();
+  }, [pendingAction, onActionConsumed, setIsAddTxOpen, setIsAiScanOpen, setIsImportOpen, setIsAddWalletOpen]);
 
+  // 7. Data Fetching via Store Action
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    refreshData(onWalletsSync);
+  }, [refreshData, selectedWalletId, selectedCategoryId, startDate, endDate, searchQuery, onWalletsSync]);
 
   // Sync wallets on list mutation
   useEffect(() => {
@@ -238,46 +210,6 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
       onWalletsSync?.(wallets);
     }
   }, [wallets, onWalletsSync]);
-
-  // Handlers for child components
-  const handleSaveTransaction = async (data: any) => {
-    if (data.id) {
-      await api.updateTransaction(data.id, data);
-    } else {
-      await api.createTransaction(data);
-    }
-    await refreshData();
-  };
-
-  const handleTransfer = async (data: any) => {
-    await api.createTransfer(data);
-    await refreshData();
-  };
-
-  const handleDeleteTransaction = async (id: string) => {
-    await api.deleteTransaction(id);
-    await refreshData();
-  };
-
-  const handleAddWallet = async (data: any) => {
-    await api.createWallet(data);
-    await refreshData();
-  };
-
-  const handleDeleteWallet = async (id: string) => {
-    await api.deleteWallet(id);
-    await refreshData();
-  };
-
-  const handleCreateBudget = async (data: any) => {
-    await api.createBudget(data);
-    await refreshData();
-  };
-
-  const handleDeleteBudget = async (id: string) => {
-    await api.deleteBudget(id);
-    await refreshData();
-  };
 
   const handleApplyReceipt = (_data: { merchant: string; amount: number; categoryId: string; date: string }) => {
     setIsAddTxOpen(true);
@@ -362,7 +294,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
                   </div>
                   <TransactionsList
                     transactions={transactions.slice(0, 8)}
-                    onDelete={handleDeleteTransaction}
+                    onDelete={deleteTransaction}
                   />
                 </div>
               </div>
@@ -377,7 +309,7 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
                 </div>
                 <TransactionsList
                   transactions={transactions}
-                  onDelete={handleDeleteTransaction}
+                  onDelete={deleteTransaction}
                 />
               </div>
             )}
@@ -386,30 +318,31 @@ export const FederatedFinanceApp: React.FC<FederatedFinanceProps> = ({
               <BudgetsView
                 budgets={budgets}
                 categories={categories}
-                onCreateBudget={handleCreateBudget}
-                onDeleteBudget={handleDeleteBudget}
+                onCreateBudget={createBudget}
+                onDeleteBudget={deleteBudget}
               />
             )}
 
             {activeTab === 'wallets' && (
               <WalletsManagerView
                 wallets={wallets}
-                onDeleteWallet={handleDeleteWallet}
+                onDeleteWallet={deleteWallet}
               />
             )}
           </>
         )}
       </main>
 
-      {/* Modals triggered internally or via 'oaktree:finance-action' events */}
+      {/* Modals triggered internally or via pendingAction */}
       <AddTransactionModal
         wallets={wallets}
         categories={categories}
-        onSave={handleSaveTransaction}
-        onTransfer={handleTransfer}
+        onSave={saveTransaction}
+        onTransfer={transfer}
+        isEmbedded={isEmbedded}
       />
 
-      <AddWalletModal onAddWallet={handleAddWallet} />
+      <AddWalletModal onAddWallet={createWallet} />
 
       <CSVImportModal
         wallets={wallets}

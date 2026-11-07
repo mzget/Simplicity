@@ -39,6 +39,39 @@ export const setIsLocalMode = (val: boolean): void => {
   clientIsLocalMode = val;
 };
 
+let clientAllowLocalFallback: boolean = true;
+let clientIsEmbedded: boolean = false;
+
+export const getAllowLocalFallback = (): boolean => clientAllowLocalFallback;
+export const setAllowLocalFallback = (val: boolean): void => {
+  clientAllowLocalFallback = val;
+};
+
+export const getIsEmbedded = (): boolean => clientIsEmbedded;
+export const setIsEmbedded = (val: boolean): void => {
+  clientIsEmbedded = val;
+};
+
+export const setSimplicityConfig = (config: {
+  apiBaseUrl?: string;
+  isLocalMode?: boolean;
+  allowLocalFallback?: boolean;
+  isEmbedded?: boolean;
+}): void => {
+  if (config.apiBaseUrl !== undefined) {
+    setSimplicityApiBaseUrl(config.apiBaseUrl);
+  }
+  if (config.isLocalMode !== undefined) {
+    setIsLocalMode(config.isLocalMode);
+  }
+  if (config.allowLocalFallback !== undefined) {
+    clientAllowLocalFallback = config.allowLocalFallback;
+  }
+  if (config.isEmbedded !== undefined) {
+    clientIsEmbedded = config.isEmbedded;
+  }
+};
+
 export const setSimplicityApiBaseUrl = (baseUrl: string): void => {
   configuredApiBaseUrl = (baseUrl || '').replace(/\/+$/, '');
 };
@@ -394,6 +427,7 @@ const handleApiOrLocalFallback = async <T>(
 ): Promise<T> => {
   const isLocal = isLocalHostEnvironment();
   const offline = isClientOffline();
+  const disallowFallback = clientIsEmbedded && clientAllowLocalFallback === false;
 
   if (!offline) {
     try {
@@ -414,10 +448,13 @@ const handleApiOrLocalFallback = async <T>(
         throw new Error('401 Unauthorized');
       }
       // If server returned 4xx/5xx in production, let it fail unless offline
-      if (!isLocal) {
+      if (!isLocal || disallowFallback) {
         throw new Error(`API Error: ${res.status} ${res.statusText}`);
       }
     } catch (err) {
+      if (disallowFallback) {
+        throw err;
+      }
       if (!isLocal && !offline) {
         // Only fallback if the error is a network connection failure (TypeError)
         const isNetworkErr = err instanceof TypeError || (err as any)?.name === 'TypeError';
@@ -426,6 +463,10 @@ const handleApiOrLocalFallback = async <T>(
         }
       }
     }
+  }
+
+  if (disallowFallback) {
+    throw new Error('Network unavailable and local fallback is disabled in embedded production mode.');
   }
 
   // Fallback to IndexedDB snapshot or Local Storage
@@ -447,13 +488,21 @@ export const api = {
     setSimplicityApiBaseUrl(baseUrl);
   },
 
-  setConfig(config: { apiBaseUrl?: string; isLocalMode?: boolean }) {
-    if (config.apiBaseUrl !== undefined) {
-      setSimplicityApiBaseUrl(config.apiBaseUrl);
-    }
-    if (config.isLocalMode !== undefined) {
-      setIsLocalMode(config.isLocalMode);
-    }
+  setConfig(config: {
+    apiBaseUrl?: string;
+    isLocalMode?: boolean;
+    allowLocalFallback?: boolean;
+    isEmbedded?: boolean;
+  }) {
+    setSimplicityConfig(config);
+  },
+
+  getAllowLocalFallback(): boolean {
+    return getAllowLocalFallback();
+  },
+
+  isEmbedded(): boolean {
+    return getIsEmbedded();
   },
 
   isLocalMode(): boolean {

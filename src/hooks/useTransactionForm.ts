@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { Wallet, Category } from '../types';
 import { format, parseISO, isValid } from 'date-fns';
@@ -154,12 +154,12 @@ export function useTransactionForm({
     }
   }, [editingTx, categories, txMode, categoryId]);
 
-  const closeForm = () => {
+  const closeForm = useCallback(() => {
     setIsAddTxOpen(false);
     setEditingTx(null);
     setErrors({});
     onClose?.();
-  };
+  }, [setIsAddTxOpen, setEditingTx, setErrors, onClose]);
 
   const currentCategories = categories.filter(
     (c) => c.type === (txMode === 'income' ? 'income' : 'expense')
